@@ -1,12 +1,38 @@
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #1b1813;
+  --orange: #d37a0d;
+  --browser-orange: #ce8415ff;
+  --darker-orange: #9c5c0d;
+  --gray: #f2f2f2;
+  --secondary-white-text-color: #202020;
+  --card-background-color: #e9e9e9;
+  --card-outline-color: #c2c2c2;
+  --input-background-color: #efefef;
+  --input-border-color: #e0e0e0;
+  --desktop-navbar-background-color: var(--browser-orange);
+  --desktop-navbar-active-color: #ffffff;
+  --mobile-navbar-background-color: var(--browser-orange);
+  --mobile-navbar-active-color: #ffffff;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
     --foreground: #ededed;
+    --gray: #1f1f1f;
+    --secondary-white-text-color: #b0b0b0;
+    --card-background-color: #2b2b2b;
+    --card-outline-color: #4B4B4B;
+    --input-background-color: #373737;
+    --input-border-color: #4a4a4a;
+    --input-background-color-2: #3d3d3d;
+    --input-border-color-2: #4b4b4b;
+    --desktop-navbar-background-color: #1f1f1f;
+    --desktop-navbar-active-color: var(--orange);
+    --mobile-navbar-active-color: var(--orange);
+    --mobile-navbar-background-color: #1f1f1f;
+    --footer-background-color: #181818;
   }
 }
 

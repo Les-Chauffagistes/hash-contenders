@@ -1,0 +1,7 @@
+.logitem.item {
+    border-bottom: solid 1px #282828;
+}
+
+.logitem.item:last-child {
+    border-bottom: none;
+}

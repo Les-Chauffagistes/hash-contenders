@@ -1,0 +1,94 @@
+.create {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    max-width: 520px;
+    margin: 40px auto;
+    padding: 0 20px;
+}
+
+.title {
+    font-size: 24px;
+    font-weight: 600;
+    letter-spacing: -0.5px;
+}
+
+.fieldset {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    border: 1px solid var(--card-outline-color);
+    border-radius: 10px;
+    padding: 20px;
+}
+
+.fieldset legend {
+    font-weight: 600;
+    font-size: 14px;
+    padding: 0 8px;
+    color: var(--orange);
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.field label {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--secondary-white-text-color);
+}
+
+.field input[type=text],
+.field input[type=number] {
+    padding: 8px 12px;
+    border-radius: 7px;
+    border: 1px solid var(--input-border-color);
+    background-color: var(--input-background-color);
+    color: var(--foreground);
+    font-size: 14px;
+}
+
+.field input[type=text]:focus,
+.field input[type=number]:focus {
+    outline: none;
+    border-color: var(--orange);
+}
+
+.errorLabel {
+    font-size: 12px;
+    color: rgb(178, 36, 36);
+}
+
+.checkboxField {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.checkboxField input[type=checkbox] {
+    accent-color: var(--orange);
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+.submitButton {
+    padding: 10px 20px;
+    border-radius: 7px;
+    border: none;
+    background-color: var(--orange);
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.submitButton:hover {
+    background-color: var(--darker-orange);
+}
