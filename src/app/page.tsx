@@ -1,66 +1,64 @@
-import Image from "next/image";
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
 import styles from "./page.module.css";
+import { getAllBattles } from "./api";
+import BattleCard from "./components/BattleCard";
+import { Battle } from "../../models/Battle";
+import Link from "next/link";
+import { Search } from "lucide-react";
 
 export default function Home() {
+  const [battles, setBattles] = useState<Battle[] | null>(null);
+  const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    getAllBattles().then(data => setBattles(data));
+  }, []);
+
+  const filteredBattles = useMemo(() => {
+    if (!battles) return null;
+    if (!search.trim()) return battles;
+    const query = search.trim().toLowerCase();
+    return battles.filter(b =>
+      b.contender_1_name.toLowerCase().includes(query) ||
+      b.contender_2_name.toLowerCase().includes(query)
+    );
+  }, [battles, search]);
+
+  let view;
+
+  if (filteredBattles === null) {
+    view = <p>Ça va chauffer...</p>;
+  } else if (filteredBattles.length === 0) {
+    view = <p className={styles.empty}>{search.trim() ? "Aucun résultat" : "Aucune bataille en cours"}</p>;
+  } else {
+    view = filteredBattles.map(battle =>
+      <Link href={`/battle/${battle.id}`} key={battle.id}>
+        <BattleCard battle={battle} />
+      </Link>)
+  }
+
   return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className={styles.intro}>
-          <h1>To get started, edit the page.tsx file.</h1>
-          <p>
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <main className={styles.page}>
+      <div className={styles.toolbar}>
+        <div className={styles.searchWrapper}>
+          <Search size={16} className={styles.searchIcon} />
+          <input
+            type="text"
+            placeholder="Rechercher un contender..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className={styles.searchInput}
+          />
         </div>
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className={styles.secondary}
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+        <button className="primary">
+          <Link href="/create">Nouvelle bataille</Link>
+        </button>
+      </div>
+      <div className={styles.main}>
+        {view}
+      </div>
+    </main>
   );
 }
