@@ -69,6 +69,7 @@ export default function BatlePage() {
                             contender_2_best_diff: data.contender_2_best_diff,
                             date: new Date(data.date),
                             battle_id: old.battle_id,
+                            winner: data.winner
                         });
 
                         const hitsArray = Array.from(hitsMap.values())
@@ -139,9 +140,9 @@ export default function BatlePage() {
                 </div>
                 <div style={{ width: "100%", flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", backgroundColor: "var(--bg-alt)", borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingTop: 20 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", padding: "5px 30px 30px" }}>
-                        <p>{battleStatus?.hits ? battleStatus?.hits?.filter(hit => hit.contender_1_best_diff > hit.contender_2_best_diff).length : "-"}</p>
+                        <p>{battleStatus?.hits ? battleStatus?.hits?.filter(hit => hit.winner === 1).length : "-"}</p>
                         <p>Historique</p>
-                        <p>{battleStatus?.hits ? battleStatus?.hits?.filter(hit => hit.contender_1_best_diff < hit.contender_2_best_diff).length : "-"}</p>
+                        <p>{battleStatus?.hits ? battleStatus?.hits?.filter(hit => hit.winner === 2).length : "-"}</p>
                     </div>
                     {logContent}
                 </div>

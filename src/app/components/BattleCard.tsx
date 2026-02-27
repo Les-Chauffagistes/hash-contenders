@@ -13,8 +13,8 @@ export default function BattleCard({ battle }: Readonly<{ battle: Battle }>) {
         getBattleStatus(battle.id, true).then(setStatus);
     }, [battle.id]);
 
-    const score1 = status?.hits?.filter(h => h.contender_1_best_diff > h.contender_2_best_diff).length ?? 0;
-    const score2 = status?.hits?.filter(h => h.contender_2_best_diff > h.contender_1_best_diff).length ?? 0;
+    const score1 = status?.hits?.filter(h => h.winner === 1).length ?? 0;
+    const score2 = status?.hits?.filter(h => h.winner === 2).length ?? 0;
 
     const hasStarted = status !== null && status.current_round > 0;
 

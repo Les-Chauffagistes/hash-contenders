@@ -1,0 +1,80 @@
+name: build-and-release
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: [self-hosted, macOS]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+        
+      - name: Inject NEXT_PUBLIC
+        run: |
+          echo NEXT_PUBLIC_API_URL=https://api-contenders.swakraft.fr > .env
+          echo NEXT_PUBLIC_WSS_URL=wss://api-contenders.swakraft.fr >> .env
+        
+      - run: npm ci --prefer-offline
+      - run: export DATABASE_URL="postgresql://user:pass@localhost:5432/db"
+      - name: prisma generate
+        env:
+          DATABASE_URL: "postgresql://dummy:dummy@localhost:5432/dummy"
+        run: npx prisma generate
+
+      - name: next build
+        env: 
+          SESSION_PASSWORD: 1234
+        run: npm run build
+
+      - name: Pack
+        run: |
+          TS=$(date -u +"%Y%m%dT%H%M%SZ")
+          mkdir -p artifact
+          tar -C . -czf artifact/contenders.chauffagistes-${TS}.tar.gz \
+            .next package.json package-lock.json public
+          echo "TS=$TS" >> $GITHUB_ENV
+
+      - name: Push git tag
+        env:
+          GITHUB_PAT: ${{ secrets.GLOBAL_DEPLOY_TOKEN }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+      
+          # Setup credential helper pour utiliser le token
+          git remote set-url origin https://github.com/Les-Chauffagistes/hash-contenders.git
+          git config credential.helper '!f() { echo "username=x-access-token"; echo "password=$GITHUB_PAT"; }; f'
+      
+          git tag v$TS
+          git push origin v$TS
+
+      - name: Create GitHub Release
+        id: create_release
+        uses: actions/create-release@v1
+        with:
+          tag_name: "v${{ env.TS }}"
+          release_name: "Release ${{ env.TS }}"
+          body: "Automated release ${{ env.TS }}"
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GLOBAL_DEPLOY_TOKEN }}
+
+      - name: Upload artifact to release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: artifact/stats.chauffagistes-${{ env.TS }}.tar.gz
+          tag_name: v${{ env.TS }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GLOBAL_DEPLOY_TOKEN }}
+
+      - name: notify-deploy
+        run: |
+          curl -X POST ${{ secrets.GLOBAL_DEPLOY_URL }} \
+            -H "X-Deploy-Token: ${{ secrets.GLOBAL_DEPLOY_TOKEN }}" \
+            -d '{"repository": {"full_name": "Les-Chauffagistes/hash-contenders"}}'
