@@ -19,7 +19,7 @@ export default function LogItem({ hit }: { hit: Round }) {
             }}>
             <h3>{UnitConverter.fromNumberToString(hit.contender_1_best_diff)}</h3>
             {hit.contender_1_best_diff > hit.contender_2_best_diff ? <HandFist color="orange"/> : <HandFist opacity={0}/>}
-            <p>{hit.block_height}</p>
+            <p style={{textAlign: "center"}}>{hit.block_height}</p>
             {hit.contender_1_best_diff < hit.contender_2_best_diff ? <HandFist color="orange"/> : <HandFist opacity={0}/>}
             <h3>{UnitConverter.fromNumberToString(hit.contender_2_best_diff)}</h3>
         </div>
