@@ -20,11 +20,6 @@ jobs:
           echo NEXT_PUBLIC_WSS_URL=wss://api-contenders.swakraft.fr >> .env
         
       - run: npm ci --prefer-offline
-      - run: export DATABASE_URL="postgresql://user:pass@localhost:5432/db"
-      - name: prisma generate
-        env:
-          DATABASE_URL: "postgresql://dummy:dummy@localhost:5432/dummy"
-        run: npx prisma generate
 
       - name: next build
         env: 
