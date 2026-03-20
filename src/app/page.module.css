@@ -60,3 +60,24 @@
   text-align: center;
   padding: 40px 0;
 }
+.primaryAction,
+.secondaryAction {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-weight: 700;
+}
+
+.primaryAction {
+  background: var(--accent);
+  color: black;
+}
+
+.secondaryAction {
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  background: transparent;
+}

@@ -52,9 +52,14 @@ export default function Home() {
             className={styles.searchInput}
           />
         </div>
-        <button className="primary">
-          <Link href="/create">Nouvelle bataille</Link>
-        </button>
+
+        <Link href="/admin" className={styles.secondaryAction}>
+          Admin
+        </Link>
+
+        <Link href="/create" className={styles.primaryAction}>
+          Nouvelle bataille
+        </Link>
       </div>
       <div className={styles.main}>
         {view}
