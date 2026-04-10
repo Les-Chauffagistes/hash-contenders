@@ -1,0 +1,47 @@
+.desktopnavbar ol {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    background-color: var(--bg-alt);
+    height: 100dvh;
+    padding: 20px 10px;
+    overflow-y: auto;
+    min-width: 230px;
+    border-right: 1px solid var(--border-color-soft);
+}
+
+
+.desktopnavbar li {
+    border-radius: var(--radius);
+    cursor: pointer;
+    align-items: center;
+    display: flex;
+    padding: 8px 12px;
+    gap: 8px;
+    transition: all 0.2s ease;
+}
+
+.desktopnavbar li a {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.desktopnavbar li:last-of-type {
+    margin-top: auto;
+}
+
+.desktopnavbar li.active {
+    background-color: var(--bg-soft);
+    color: var(--accent);
+}
+
+.desktopnavbar li:hover {
+    color: var(--text-muted);
+}
+
+.desktopnavbar li.active:hover {
+    background-color: var(--bg-soft);
+    color: var(--accent);
+}

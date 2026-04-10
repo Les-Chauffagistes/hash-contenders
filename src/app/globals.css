@@ -4,9 +4,10 @@
   --bg-main: #0e0e11;
   --bg-alt: #15151a;
   --bg-soft: #1c1c22;
-  --bg-blue: rgba(117, 117, 144, 0.165);
+  --bg-blue: #7575902a;
   
   --border-color: #34343e;
+  --border-color-soft: #34343e5c;
 
   --text-main: #f5f5f7;
   --text-muted: #b3b3bd;

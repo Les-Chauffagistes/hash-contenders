@@ -138,7 +138,7 @@ export default function BatlePage() {
                         /> : <PlayerRight name="Ça charge..." pv={0} pvMax={1} alignment="end" />}
                     </div>
                 </div>
-                <div style={{ width: "100%", flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", backgroundColor: "var(--bg-alt)", borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingTop: 20 }}>
+                <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", backgroundColor: "var(--bg-alt)", borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingTop: 20, margin: "0 10px" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", padding: "5px 30px 30px" }}>
                         <p>{battleStatus?.hits ? battleStatus?.hits?.filter(hit => hit.winner === 1).length : "-"}</p>
                         <p>Historique</p>
