@@ -28,28 +28,44 @@ export default function BatlePage() {
             const data: WebSocketEvent = JSON.parse(e.data);
             switch (data.type) {
                 case "BEST_SHARE_UPDATE": {
-
-                    if (data.user === "contender_1") {
-                        setBattleStatus(old => {
-                            if (!old) return old;
-                            old.contender_info[0].current_round_best_diff = data.diff
-                            return { ...old }
-                        });
-                    } else if (data.user === "contender_2") {
-                        setBattleStatus(old => {
-                            if (!old) return old;
-                            old.contender_info[1].current_round_best_diff = data.diff
-                            return { ...old }
-                        });
-                    }
+                    const contenderIndex = data.user === "contender_1" ? 0 : 1;
+                    const diffKey = data.user === "contender_1" ? "contender_1_best_diff" : "contender_2_best_diff";
+                    setBattleStatus(old => {
+                        if (!old) return old;
+                        const updatedContenderInfo = old.contender_info.map((c, i) =>
+                            i === contenderIndex ? { ...c, current_round_best_diff: data.diff } : c
+                        );
+                        const updatedHits = old.hits.map(hit =>
+                            hit.winner === null ? { ...hit, [diffKey]: data.diff } : hit
+                        );
+                        return { ...old, contender_info: updatedContenderInfo, hits: updatedHits };
+                    });
                     break;
                 }
 
                 case "ROUND_UPDATE": {
+                    const blockHeight = Number.parseInt(data.block_height, 16);
                     setBattleStatus(old => {
                         if (!old) return old;
-                        old.current_round = data.round
-                        return { ...old }
+
+                        const hitsMap = new Map<number, Round>();
+                        old.hits.forEach(hit => hitsMap.set(hit.block_height, hit));
+
+                        if (!hitsMap.has(blockHeight)) {
+                            hitsMap.set(blockHeight, {
+                                block_height: blockHeight,
+                                contender_1_best_diff: 0,
+                                contender_2_best_diff: 0,
+                                date: new Date(),
+                                battle_id: old.battle_id,
+                                winner: null
+                            });
+                        }
+
+                        const hitsArray = Array.from(hitsMap.values())
+                            .sort((a, b) => b.block_height - a.block_height);
+
+                        return { ...old, current_round: data.round, hits: hitsArray };
                     })
                     break;
                 }

@@ -2,9 +2,11 @@
     display: flex;
     flex-direction: column;
     gap: 24px;
+    width: 100%;
     max-width: 520px;
-    margin: 40px auto;
-    padding: 0 20px;
+    margin: 0px auto;
+    padding: 40px 20px;
+    overflow: scroll;
 }
 
 .title {
