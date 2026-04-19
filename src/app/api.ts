@@ -1,8 +1,9 @@
-import { Battle } from "../../models/Battle";
-import { BattleStatus } from "../../models/BattleStatus";
-import { CreateBattle } from "../../models/CreateBattle";
-import { Round } from "../../models/Hit";
-import { components } from "@les-chauffagistes/authentication-types"
+import {Battle} from "../../models/Battle";
+import {BattleStatus} from "../../models/BattleStatus";
+import {CreateBattle} from "../../models/CreateBattle";
+import {Round} from "../../models/Hit";
+import {components} from "@les-chauffagistes/authentication-types"
+import {UnauthorizedError} from "@/app/api/lib/exceptions";
 
 
 export async function getBattleStatus(battleId: number | string, includeHits: boolean = false): Promise<BattleStatus> {
@@ -52,7 +53,7 @@ export async function getMe(): Promise<components["schemas"]["User"] | null> {
 }
 
 export async function refreshToken() {
-    return await fetch(`${process.env.NEXT_PUBLIC_AUTH_API_URL}/refresh`, { credentials: "include", method: "POST" });
+    return await fetch(`${process.env.NEXT_PUBLIC_AUTH_API_URL}/refresh`, {credentials: "include", method: "POST"});
 }
 
 export async function logOut() {
@@ -61,4 +62,10 @@ export async function logOut() {
         credentials: "include",
         mode: "cors"
     })
+}
+
+export async function getUserBets() {
+    const res = await authFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/bets`);
+    if (!res.ok) throw new UnauthorizedError();
+    return res.json();
 }

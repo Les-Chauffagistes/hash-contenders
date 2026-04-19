@@ -6,7 +6,12 @@ import { useEffect, useState } from "react";
 import { getBattleStatus } from "@/app/api";
 import styles from "./BattleCard.module.css";
 
-export default function BattleCard({ battle }: Readonly<{ battle: Battle }>) {
+type Props = {
+    battle: Battle;
+    onBet?: (e: React.MouseEvent) => void;
+};
+
+export default function BattleCard({ battle, onBet }: Readonly<Props>) {
     const [status, setStatus] = useState<BattleStatus | null>(null);
 
     useEffect(() => {
@@ -54,6 +59,18 @@ export default function BattleCard({ battle }: Readonly<{ battle: Battle }>) {
             <div className={styles.footer}>
                 <span>Bloc {battle.start_height}</span>
                 <span>{battle.rounds} rounds · {battle.contenders_pv} PV</span>
+                {onBet && !battle.is_finished && (
+                    <button
+                        className={styles.betButton}
+                        onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            onBet(e);
+                        }}
+                    >
+                        Parier
+                    </button>
+                )}
             </div>
         </div>
     );

@@ -6,11 +6,12 @@ import { getAllBattles } from "./api";
 import BattleCard from "./components/BattleCard";
 import { Battle } from "../../models/Battle";
 import Link from "next/link";
-import { Search } from "lucide-react";
+import { Search, X } from "lucide-react";
 
 export default function Home() {
   const [battles, setBattles] = useState<Battle[] | null>(null);
   const [search, setSearch] = useState("");
+  const [selectedBattle, setSelectedBattle] = useState<Battle | null>(null);
 
   useEffect(() => {
     getAllBattles().then(data => setBattles(data));
@@ -35,8 +36,12 @@ export default function Home() {
   } else {
     view = filteredBattles.map(battle =>
       <Link href={`/battle/${battle.id}`} key={battle.id}>
-        <BattleCard battle={battle} />
-      </Link>)
+        <BattleCard
+          battle={battle}
+          onBet={!battle.is_finished ? () => setSelectedBattle(battle) : undefined}
+        />
+      </Link>
+    );
   }
 
   return (
@@ -58,6 +63,34 @@ export default function Home() {
       </div>
       <div className={styles.main}>
         {view}
+      </div>
+
+      {selectedBattle && (
+        <div className={styles.backdrop} onClick={() => setSelectedBattle(null)} />
+      )}
+      <div className={`${styles.drawer} ${selectedBattle ? styles.drawerOpen : ""}`}>
+        {selectedBattle && (
+          <>
+            <div className={styles.drawerHeader}>
+              <span className={styles.drawerTitle}>Créer un pari</span>
+              <button className={styles.drawerClose} onClick={() => setSelectedBattle(null)}>
+                <X size={18} />
+              </button>
+            </div>
+            <p className={styles.drawerBattle}>
+              <span className={styles.drawerContender}>{selectedBattle.contender_1_name}</span>
+              <span className={styles.drawerVs}>vs</span>
+              <span className={styles.drawerContender}>{selectedBattle.contender_2_name}</span>
+            </p>
+            <Link
+              href={`/bets/create?battle_id=${selectedBattle.id}`}
+              className={styles.drawerButton}
+              onClick={() => setSelectedBattle(null)}
+            >
+              Créer un pari
+            </Link>
+          </>
+        )}
       </div>
     </main>
   );

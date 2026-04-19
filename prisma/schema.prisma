@@ -19,6 +19,12 @@ enum ResultStatus {
   cancelled
 }
 
+enum BetStatus {
+  pending
+  settled
+  canceled
+}
+
 model Bet {
   id        String       @id @default(uuid())
   battleId  String
@@ -26,6 +32,7 @@ model Bet {
   createdAt DateTime     @default(now())
   amount    Int
   result    ResultStatus @default(pending)
+  status    BetStatus    @default(pending)
 
   betOnWinner BetOnWinner?
 }
@@ -34,5 +41,5 @@ model BetOnWinner {
   betId       String @id
   winnerIndex Int
 
-  bet Bet @relation(fields: [betId], references: [id])  
+  bet Bet @relation(fields: [betId], references: [id])
 }
