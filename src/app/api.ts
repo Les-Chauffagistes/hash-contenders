@@ -65,7 +65,7 @@ export async function logOut() {
 }
 
 export async function getUserBets() {
-    const res = await authFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/bets`);
+    const res = await authFetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/bets`);
     if (!res.ok) throw new UnauthorizedError();
     return res.json();
 }
