@@ -107,6 +107,14 @@ async function handleBetOnWinner(db: PrismaClient, bet: {
         })
         throw new BurnFailedError();
     }
+    await db.bet.update({
+        where: {
+            id: storedBetId!
+        },
+        data: {
+            status: "settled"
+        }
+    })
 }
 
 export async function handleBet(db: PrismaClient, bet: BetResult, access_token: string) {

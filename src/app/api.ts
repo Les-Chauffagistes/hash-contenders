@@ -4,6 +4,7 @@ import {CreateBattle} from "../../models/CreateBattle";
 import {Round} from "../../models/Hit";
 import {components} from "@les-chauffagistes/authentication-types"
 import {UnauthorizedError} from "@/app/api/lib/exceptions";
+import {UserBetListItem} from "@/app/bets/types";
 
 
 export async function getBattleStatus(battleId: number | string, includeHits: boolean = false): Promise<BattleStatus> {
@@ -64,7 +65,7 @@ export async function logOut() {
     })
 }
 
-export async function getUserBets() {
+export async function getUserBets(): Promise<UserBetListItem[]> {
     const res = await authFetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/bets`);
     if (!res.ok) throw new UnauthorizedError();
     return res.json();
