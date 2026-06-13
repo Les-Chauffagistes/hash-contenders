@@ -8,7 +8,7 @@ ENV DATABASE_URL="dummy"
 ENV SESSION_PASSWORD="dummy"
 
 COPY package*.json ./
-RUN npm ci
+RUN --mount=type=secret,id=npmrc,target=/root/.npmrc npm ci
 COPY . .
 RUN npx prisma generate
 RUN npm run build
