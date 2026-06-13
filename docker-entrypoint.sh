@@ -4,12 +4,7 @@ set -e
 
 # Injection des secrets
 DB_PASS=$(cat /run/secrets/db_password)
-export PGPASSWORD="${DB_PASS}"
-export DATABASE_URL="postgresql://postgres:${DB_PASS}@${PGHOST}:${PGPORT:-5432}/${PGDATABASE}"
-export POOL_TOKEN=$(cat /run/secrets/hash_contenders_staging_pool_token)
-export SESSION_PASSWORD=$(cat /run/secrets/hash_contenders_staging_session_password)
-export NEXTAUTH_SECRET=$(cat /run/secrets/hash_contenders_staging_nextauth_secret)
-
+export DATABASE_URL="postgresql://postgres:${DB_PASS}@${DB_HOST}:${DB_PORT:-5432}/${DB_NAME}"
 
 cat > public/config.js << CONF
 window.__CONFIG__ = {
