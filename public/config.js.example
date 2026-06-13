@@ -1,0 +1,7 @@
+window.__CONFIG__ = {
+  API_URL: "https://referee.chauffagistes-btc.fr",
+  WSS_URL: "wss://referee.chauffagistes-btc.fr",
+  BASE_URL: "https://contenders.chauffagistes.fr",
+  AUTH_API_URL: "https://api-auth.chauffagistes-btc.fr/auth",
+  AUTH_URL: "https://auth.chauffagistes-btc.fr"
+};

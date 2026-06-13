@@ -2,6 +2,7 @@ import { components } from "@les-chauffagistes/authentication-types";
 import { PrismaClient } from "@/generated/prisma/client";
 import { Battle } from "../../../models/Battle";
 import { UserBetListItem } from "@/app/bets/types";
+import {config} from "@/lib/config";
 
 export async function getUserBets(db: PrismaClient, user: components["schemas"]["User"]) {
     return db.bet.findMany({
@@ -22,7 +23,7 @@ export async function getUserBets(db: PrismaClient, user: components["schemas"][
 export async function getBattlesByIds(battleIds: number[]): Promise<Battle[]> {
     if (battleIds.length === 0) return [];
 
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/v1/battles/by-ids`, {
+    const response = await fetch(`${config.API_URL}/v1/battles/by-ids`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
