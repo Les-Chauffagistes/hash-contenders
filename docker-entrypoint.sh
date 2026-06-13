@@ -3,7 +3,7 @@ set -e
 
 
 # Injection des secrets
-DB_PASS=$(cat /run/secrets/hash_contenders_staging_db_password)
+DB_PASS=$(cat /run/secrets/db_password)
 export PGPASSWORD="${DB_PASS}"
 export DATABASE_URL="postgresql://postgres:${DB_PASS}@${PGHOST}:${PGPORT:-5432}/${PGDATABASE}"
 export POOL_TOKEN=$(cat /run/secrets/hash_contenders_staging_pool_token)
