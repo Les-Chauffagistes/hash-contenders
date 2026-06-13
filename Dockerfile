@@ -34,7 +34,7 @@ RUN apk add --no-cache openssl libssl3
 COPY --from=build /app/.next/standalone ./
 COPY --from=build /app/.next/static     ./.next/static
 COPY --from=build /app/public           ./public
-COPY --from=build /app/generated        ./generated
+COPY --from=build /app/src/generated    ./src/generated
 COPY --from=build /app/prisma           ./prisma
 
 COPY docker-entrypoint.sh ./
