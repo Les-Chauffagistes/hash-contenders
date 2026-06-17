@@ -3,7 +3,7 @@
 import { Suspense, useActionState, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { getBattleStatus } from "../../api";
-import { BattleStatus } from "../../../../../models/BattleStatus";
+import { BattleStatus } from "../../../../models/BattleStatus";
 import { createBetAction } from "../../../../lib/actions/createBet";
 import styles from "./page.module.css";
 

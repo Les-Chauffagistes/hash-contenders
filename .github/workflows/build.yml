@@ -1,0 +1,22 @@
+name: Build app
+
+on:
+  push:
+    branches: ["**"]
+    tags: ["v*.*.*"]
+  pull_request:
+
+jobs:
+  build-app:
+    uses: les-chauffagistes/deploy/.github/workflows/build.yml@develop
+    with:
+      service-name: contenders
+      build-target: runner
+    secrets: inherit
+
+  build-migrator:
+    uses: les-chauffagistes/deploy/.github/workflows/build.yml@develop
+    with:
+      service-name: contenders-migrator
+      build-target: migrator
+    secrets: inherit

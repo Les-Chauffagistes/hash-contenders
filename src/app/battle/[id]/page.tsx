@@ -11,6 +11,7 @@ import { WebSocketEvent } from "../../../../models/WebSocketEvents";
 import styles from "./page.module.css"
 import { Round } from "../../../../models/Hit";
 import { HandFist } from "lucide-react";
+import {config} from "@/lib/config";
 
 
 export default function BatlePage() {
@@ -23,7 +24,7 @@ export default function BatlePage() {
 
     // Produit 2 ws en mode dev. Normal. N'en produit qu'un en build
     useMemo(() => {
-        const ws = new WebSocket(`${process.env.NEXT_PUBLIC_WSS_URL}/v1/ws/${battleId}`);
+        const ws = new WebSocket(`${config.WSS_URL}/v1/ws/${battleId}`);
         ws.onmessage = (e) => {
             const data: WebSocketEvent = JSON.parse(e.data);
             switch (data.type) {
