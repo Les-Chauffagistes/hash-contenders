@@ -11,7 +11,7 @@ export default function CreatePage() {
     const [blockHeight, setBlockHeight] = useState<number | undefined>();
 
     useEffect(() => {
-        getBitcoinBlockHeight().then(setBlockHeight);
+        getBitcoinBlockHeight().then(h => setBlockHeight(h + 2));
     }, []);
     return (
         <form action={action} className={styles.create}>
