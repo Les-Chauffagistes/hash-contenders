@@ -1,12 +1,18 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { createBattleAction } from "../../../lib/actions/createBattle";
+import { getBitcoinBlockHeight } from "@/app/api";
 import styles from "./page.module.css";
 
 
 export default function CreatePage() {
     const [state, action] = useActionState(createBattleAction, {});
+    const [blockHeight, setBlockHeight] = useState<number | undefined>();
+
+    useEffect(() => {
+        getBitcoinBlockHeight().then(h => setBlockHeight(h + 2));
+    }, []);
     return (
         <form action={action} className={styles.create}>
             <h1 className={styles.title}>Nouvelle bataille</h1>
@@ -73,7 +79,7 @@ export default function CreatePage() {
                 <div className={styles.field}>
                     <label htmlFor="start_height">Hauteur du bloc de départ</label>
                     <input type="number" id="start_height"
-                    name="start_height" placeholder="?"/>
+                    name="start_height" defaultValue={blockHeight}/>
                     {state?.errors?.start_height && (
                         <p className={styles.errorLabel}>{state.errors.start_height}</p>
                     )}
