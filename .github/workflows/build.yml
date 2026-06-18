@@ -10,13 +10,13 @@ jobs:
   build-app:
     uses: les-chauffagistes/deploy/.github/workflows/build.yml@develop
     with:
-      service-name: contenders
+      service-name: hash-contenders
       build-target: runner
     secrets: inherit
 
   build-migrator:
     uses: les-chauffagistes/deploy/.github/workflows/build.yml@develop
     with:
-      service-name: contenders-migrator
+      service-name: hash-contenders-migrator
       build-target: migrator
     secrets: inherit
