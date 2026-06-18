@@ -71,3 +71,8 @@ export async function getUserBets(): Promise<UserBetListItem[]> {
     if (!res.ok) throw new UnauthorizedError();
     return res.json();
 }
+
+
+export async function getBitcoinBlockHeight(): Promise<number> {
+    return fetch(`${config.BITCOIN_API_URL}/bitcoin-block-height`).then(res => res.text()).then(Number.parseInt)
+}
