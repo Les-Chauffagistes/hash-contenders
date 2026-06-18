@@ -3,5 +3,6 @@ window.__CONFIG__ = {
   WSS_URL: "wss://referee.chauffagistes-btc.fr",
   BASE_URL: "https://contenders.chauffagistes.fr",
   AUTH_API_URL: "https://api-auth.chauffagistes-btc.fr/auth",
-  AUTH_URL: "https://auth.chauffagistes-btc.fr"
+  AUTH_URL: "https://auth.chauffagistes-btc.fr",
+  BITCOIN_API_URL: "https://bitcoin.staging.chauffagistes-btc.fr",
 };

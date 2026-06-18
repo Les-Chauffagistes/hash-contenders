@@ -57,9 +57,11 @@ export default function Home() {
                         className={styles.searchInput}
                     />
                 </div>
-                <button className="primary">
-                    <Link href="/create">Nouvelle bataille</Link>
-                </button>
+                <Link href="/create">
+                    <button className="primary">
+                        Nouvelle bataille
+                    </button>
+                </Link>
             </div>
             <div className={styles.main}>
                 {view}

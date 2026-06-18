@@ -14,7 +14,8 @@ window.__CONFIG__ = {
   API_URL: "${API_URL:-}",
   WSS_URL: "${WSS_URL:-}",
   AUTH_API_URL: "${AUTH_API_URL:-}",
-  AUTH_URL: "${AUTH_URL:-}"
+  AUTH_URL: "${AUTH_URL:-}",
+  BITCOIN_API_URL: "${BITCOIN_API_URL:-}"
 };
 CONF
 

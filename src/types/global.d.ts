@@ -5,5 +5,6 @@ interface Window {
     BASE_URL: string
     AUTH_API_URL: string
     AUTH_URL: string
+    BITCOIN_API_URL: string
   };
 }

@@ -24,4 +24,9 @@ export const config = {
             ? (window.__CONFIG__?.WSS_URL ?? "")
             : (process.env.WSS_URL ?? "");
     },
+    get BITCOIN_API_URL() {
+        return typeof window !== "undefined"
+            ? (window.__CONFIG__?.BITCOIN_API_URL ?? "")
+            : (process.env.BITCOIN_API_URL ?? "");
+    }
 };
