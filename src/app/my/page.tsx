@@ -3,6 +3,7 @@
 import { components } from "@les-chauffagistes/authentication-types";
 import { useEffect, useState } from "react";
 import { getMe, logOut } from "../api";
+import {config} from "@/lib/config";
 
 
 export default function MyPage() {
@@ -15,7 +16,7 @@ export default function MyPage() {
     return (
         <div>
             {user === undefined && <p>Chargement...</p>}
-            {user === null && <a href={`${process.env.NEXT_PUBLIC_AUTH_URL}/login?redirect=${globalThis.location.href}`}>Se connecter</a>}
+            {user === null && <a href={`${config.AUTH_URL}/login?redirect=${globalThis.location.href}`}>Se connecter</a>}
             {user && <>
                 <p>Yo {user.pseudo}</p>
                 <button onClick={() => {

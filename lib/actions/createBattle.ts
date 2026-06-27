@@ -2,6 +2,7 @@
 
 import { createBattle } from "@/app/api";
 import { CreateBattle } from "../../models/CreateBattle";
+import { redirect } from "next/navigation";
 
 type FormState = {
     errors?: Record<string, string>;
@@ -27,12 +28,12 @@ export async function createBattleAction(
     const areAddressesPrivates = formData.get("are_addresses_privates");
 
     if (!isNonEmptyString(contender1Address)) errors.contender_1_address = "Adresse invalide"
-    if (isNonEmptyString(contender2Address)) errors.contender_2_address = "Adresse invalide"
-    if (isNonEmptyString(contender1Name)) errors.contender_1_name = "Nom invalide"
-    if (isNonEmptyString(contender2Name)) errors.contender_2_name = "Nom invalide"
-    if (isNonEmptyString(contendersPv)) errors.contenders_pv = "PV invalides"
-    if (isNonEmptyString(rounds)) errors.rounds = "Nombre de rounds invalide"
-    if (isNonEmptyString(startHeight)) errors.start_height = "Hauteur de block invalide"
+    if (!isNonEmptyString(contender2Address)) errors.contender_2_address = "Adresse invalide"
+    if (!isNonEmptyString(contender1Name)) errors.contender_1_name = "Nom invalide"
+    if (!isNonEmptyString(contender2Name)) errors.contender_2_name = "Nom invalide"
+    if (!isNonEmptyString(contendersPv)) errors.contenders_pv = "PV invalides"
+    if (!isNonEmptyString(rounds)) errors.rounds = "Nombre de rounds invalide"
+    if (!isNonEmptyString(startHeight)) errors.start_height = "Hauteur de block invalide"
 
     if (
         !isNonEmptyString(contender1Address) ||
@@ -58,13 +59,15 @@ export async function createBattleAction(
         start_height: Number.parseInt(startHeight)
     };
 
+    let battleId: number;
     try {
         const res = await createBattle(battle);
-        console.log(res)
-        return { success: true };
+        battleId = res.id;
     } catch {
         console.log("error submitting request")
         return { errors: { _form: "Erreur serveur" } };
     }
+
+    redirect(`/battle/${battleId}`);
 
 }

@@ -1,4 +1,4 @@
-.create {
+.form {
     display: flex;
     flex-direction: column;
     gap: 24px;
@@ -6,13 +6,24 @@
     max-width: 520px;
     margin: 0px auto;
     padding: 40px 20px;
-    overflow: scroll;
 }
 
 .title {
     font-size: 24px;
     font-weight: 600;
     letter-spacing: -0.5px;
+}
+
+.battleContext {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-main);
+}
+
+.vs {
+    color: var(--text-muted);
+    font-weight: 400;
+    margin: 0 6px;
 }
 
 .fieldset {
@@ -43,7 +54,6 @@
     color: var(--text-muted);
 }
 
-.field input[type=text],
 .field input[type=number] {
     padding: 8px 12px;
     border-radius: 7px;
@@ -53,10 +63,31 @@
     font-size: 14px;
 }
 
-.field input[type=text]:focus,
 .field input[type=number]:focus {
     outline: none;
     border-color: var(--accent);
+}
+
+.radioGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.radioLabel {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    color: var(--text-main);
+}
+
+.radioLabel input[type=radio] {
+    accent-color: var(--accent);
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
 }
 
 .errorLabel {
@@ -64,19 +95,10 @@
     color: rgb(178, 36, 36);
 }
 
-.checkboxField {
-    display: flex;
-    align-items: center;
-    gap: 8px;
+.successLabel {
     font-size: 14px;
-    cursor: pointer;
-}
-
-.checkboxField input[type=checkbox] {
-    accent-color: var(--accent);
-    width: 16px;
-    height: 16px;
-    cursor: pointer;
+    color: rgb(34, 139, 34);
+    font-weight: 500;
 }
 
 .submitButton {

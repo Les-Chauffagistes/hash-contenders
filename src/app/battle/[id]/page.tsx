@@ -11,6 +11,7 @@ import { WebSocketEvent } from "../../../../models/WebSocketEvents";
 import styles from "./page.module.css"
 import { Round } from "../../../../models/Hit";
 import { HandFist } from "lucide-react";
+import {config} from "@/lib/config";
 
 
 export default function BatlePage() {
@@ -23,33 +24,53 @@ export default function BatlePage() {
 
     // Produit 2 ws en mode dev. Normal. N'en produit qu'un en build
     useMemo(() => {
-        const ws = new WebSocket(`${process.env.NEXT_PUBLIC_WSS_URL}/v1/ws/${battleId}`);
+        const ws = new WebSocket(`${config.WSS_URL}/v1/ws/${battleId}`);
         ws.onmessage = (e) => {
             const data: WebSocketEvent = JSON.parse(e.data);
             switch (data.type) {
                 case "BEST_SHARE_UPDATE": {
-
-                    if (data.user === "contender_1") {
-                        setBattleStatus(old => {
-                            if (!old) return old;
-                            old.contender_info[0].current_round_best_diff = data.diff
-                            return { ...old }
-                        });
-                    } else if (data.user === "contender_2") {
-                        setBattleStatus(old => {
-                            if (!old) return old;
-                            old.contender_info[1].current_round_best_diff = data.diff
-                            return { ...old }
-                        });
-                    }
+                    const blockHeight = Number.parseInt(data.block_height, 16);
+                    const contenderIndex = data.user === "contender_1" ? 0 : 1;
+                    const diffKey = data.user === "contender_1" ? "contender_1_best_diff" : "contender_2_best_diff";
+                    setBattleStatus(old => {
+                        if (!old) return old;
+                        const updatedHits = old.hits.map(hit =>
+                            hit.block_height === blockHeight ? {...hit, [diffKey]: data.diff} : hit
+                        );
+                        const isCurrentRound = old.hits.find(hit => hit.block_height === blockHeight)?.winner === null;
+                        const updatedContenderInfo = isCurrentRound
+                            ? old.contender_info.map((c, i) =>
+                                i === contenderIndex ? {...c, current_round_best_diff: data.diff} : c
+                            )
+                            : old.contender_info;
+                        return {...old, contender_info: updatedContenderInfo, hits: updatedHits};
+                    });
                     break;
                 }
 
                 case "ROUND_UPDATE": {
+                    const blockHeight = Number.parseInt(data.block_height, 16);
                     setBattleStatus(old => {
                         if (!old) return old;
-                        old.current_round = data.round
-                        return { ...old }
+
+                        const hitsMap = new Map<number, Round>();
+                        old.hits.forEach(hit => hitsMap.set(hit.block_height, hit));
+
+                        if (!hitsMap.has(blockHeight)) {
+                            hitsMap.set(blockHeight, {
+                                block_height: blockHeight,
+                                contender_1_best_diff: 0,
+                                contender_2_best_diff: 0,
+                                date: new Date(),
+                                battle_id: old.battle_id,
+                                winner: null
+                            });
+                        }
+
+                        const hitsArray = Array.from(hitsMap.values())
+                            .sort((a, b) => b.block_height - a.block_height);
+
+                        return { ...old, current_round: data.round, hits: hitsArray };
                     })
                     break;
                 }
@@ -78,7 +99,7 @@ export default function BatlePage() {
                         old.contender_info[0].pv = data.contender_1_pv
                         old.contender_info[1].pv = data.contender_2_pv
 
-                        return { ...old, hits: hitsArray };
+                        return {...old, hits: hitsArray};
                     });
 
                     break;
@@ -97,7 +118,16 @@ export default function BatlePage() {
             <Log hits={battleStatus.hits} />
         </div>
     ) : (
-        <div style={{ color: "var(--text-muted)", display: "flex", justifyContent: "center", alignItems: "center", flex: 1, flexDirection: "column", gap: 10, paddingBottom: 20 }}>
+        <div style={{
+            color: "var(--text-muted)",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            flex: 1,
+            flexDirection: "column",
+            gap: 10,
+            paddingBottom: 20
+        }}>
             <p>Aucun coup n&apos;a encore été porté. L&apos;historique des rounds s&apos;affichera ici.</p>
             <HandFist />
         </div>
@@ -120,7 +150,13 @@ export default function BatlePage() {
                     <div style={{ position: "relative", zIndex: 1 }}>
                         <div style={{ padding: 20, borderRadius: 55, backgroundColor: "#ff88002c", margin: -50 }}>
                             <div style={{ padding: 15, borderRadius: 40, backgroundColor: "#ff88006a" }}>
-                                <div style={{ display: "flex", backgroundColor: "var(--accent)", borderRadius: 25, padding: "10px 10px", alignItems: "end" }}>
+                                <div style={{
+                                    display: "flex",
+                                    backgroundColor: "var(--accent)",
+                                    borderRadius: 25,
+                                    padding: "10px 10px",
+                                    alignItems: "end"
+                                }}>
                                     <h1>{battleStatus?.current_round ?? 0}</h1>
                                     <h2 style={{ marginBottom: 2 }}>/{battleStatus?.rounds ?? 0}</h2>
                                 </div>
@@ -128,7 +164,8 @@ export default function BatlePage() {
                         </div>
                     </div>
 
-                    <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "end" }} className={styles.contender_div}>
+                    <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "end" }}
+                         className={styles.contender_div}>
                         {battleStatus ? <PlayerRight
                             name={battleStatus.contender_info[1].name}
                             pv={battleStatus.contender_info[1].pv}
@@ -138,7 +175,17 @@ export default function BatlePage() {
                         /> : <PlayerRight name="Ça charge..." pv={0} pvMax={1} alignment="end" />}
                     </div>
                 </div>
-                <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", backgroundColor: "var(--bg-alt)", borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingTop: 20, margin: "0 10px" }}>
+                <div style={{
+                    flex: 1,
+                    display: "flex",
+                    flexDirection: "column",
+                    overflow: "hidden",
+                    backgroundColor: "var(--bg-alt)",
+                    borderTopLeftRadius: 20,
+                    borderTopRightRadius: 20,
+                    paddingTop: 20,
+                    margin: "0 10px"
+                }}>
                     <div style={{ display: "flex", justifyContent: "space-between", padding: "5px 30px 30px" }}>
                         <p>{battleStatus?.hits ? battleStatus?.hits?.filter(hit => hit.winner === 1).length : "-"}</p>
                         <p>Historique</p>
@@ -147,6 +194,6 @@ export default function BatlePage() {
                     {logContent}
                 </div>
             </div>
-        </main >
+        </main>
     );
 }

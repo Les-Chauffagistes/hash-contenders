@@ -1,46 +1,44 @@
-FROM node:22-alpine AS deps
-WORKDIR /app
-COPY package*.json ./
-COPY .npmrc ./
-RUN npm ci
-
 FROM node:22-alpine AS build
 WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
+
+# Fixes prisma generate
+ENV DATABASE_URL="dummy"
+
+# Fixes type checking
+ENV SESSION_PASSWORD="dummy"
+
+COPY package*.json ./
+RUN --mount=type=secret,id=npmrc,target=/root/.npmrc npm ci
 COPY . .
-
-ARG NEXT_PUBLIC_API_URL
-ARG NEXT_PUBLIC_WSS_URL
-ARG NEXT_PUBLIC_BASE_URL
-ARG NEXT_PUBLIC_AUTH_API_URL
-ARG NEXT_PUBLIC_AUTH_URL
-ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
-ENV NEXT_PUBLIC_WSS_URL=$NEXT_PUBLIC_WSS_URL
-ENV NEXT_PUBLIC_BASE_URL=$NEXT_PUBLIC_BASE_URL
-ENV NEXT_PUBLIC_AUTH_API_URL=$NEXT_PUBLIC_AUTH_API_URL
-ENV NEXT_PUBLIC_AUTH_URL=$NEXT_PUBLIC_AUTH_URL
-
+RUN npx prisma generate
 RUN npm run build
+
+FROM node:22-alpine AS migrator
+WORKDIR /app
+COPY --from=build /app/node_modules      ./node_modules
+COPY --from=build /app/prisma            ./prisma
+COPY --from=build /app/prisma.config.ts  ./
+
+CMD ["sh", "-c", "\
+  export DATABASE_URL=postgresql://${DB_USER}:$(cat /run/secrets/db_password)@${DB_HOST}:5432/${DB_NAME} && \
+  until npx prisma migrate deploy; do echo 'DB pas prête, retry...'; sleep 2; done && \
+  ls prisma/migrations/ | grep -v migration_lock.toml | sort | sha256sum | cut -d' ' -f1 > /migrations/done && \
+  echo 'Flag done, migrations applied'"]
 
 FROM node:22-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 
-RUN addgroup --system --gid 1001 nodejs && \
-    adduser --system --uid 1001 nextjs
+RUN apk add --no-cache openssl libssl3
 
-RUN apk add --no-cache curl
+COPY --from=build /app/.next/standalone ./
+COPY --from=build /app/.next/static     ./.next/static
+COPY --from=build /app/public           ./public
+COPY --from=build /app/src/generated    ./src/generated
+COPY --from=build /app/prisma           ./prisma
 
-COPY --from=build /app/public ./public
-COPY --from=build --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=build --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY docker-entrypoint.sh ./
+RUN chmod +x docker-entrypoint.sh
 
-USER nextjs
-EXPOSE 3003
-ENV PORT=3003
-ENV HOSTNAME=0.0.0.0
-
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD curl -sf http://localhost:3003/ || exit 1
-
-CMD ["node", "server.js"]
+EXPOSE 3000
+ENTRYPOINT ["sh", "docker-entrypoint.sh"]
