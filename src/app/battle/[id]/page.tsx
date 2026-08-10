@@ -1,26 +1,64 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { BattleStatus } from "../../../../models/BattleStatus";
 import { useEffect, useMemo, useState } from "react";
-import { getBattleStatus } from "@/app/api";
+import { getBattleStatus, getMe } from "@/app/api";
 import PlayerLeft from "./components/PlayerLeft";
 import PlayerRight from "./components/PlayerRight";
 import Log from "./components/Log";
 import { WebSocketEvent } from "../../../../models/WebSocketEvents";
 import styles from "./page.module.css"
 import { Round } from "../../../../models/Hit";
-import { HandFist } from "lucide-react";
+import { EllipsisVertical, HandFist, Trash2 } from "lucide-react";
 import {config} from "@/lib/config";
+import { components } from "@les-chauffagistes/authentication-types";
+import { deleteBattleAction } from "../../../../lib/actions/deleteBattle";
 
 
 export default function BatlePage() {
     const [battleStatus, setBattleStatus] = useState<BattleStatus | null>(null);
+    const [user, setUser] = useState<components["schemas"]["User"] | null>(null);
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [deleteError, setDeleteError] = useState<string | null>(null);
     const path = usePathname();
+    const router = useRouter();
     const battleId = path?.split("/")[2];
+
     useEffect(() => {
         getBattleStatus(battleId, true).then(data => setBattleStatus(data));
+
+        getMe()
+            .then(setUser)
+            .catch(error => console.error("Impossible de charger l'utilisateur connecté", error));
     }, [battleId]);
+
+    const isOwner = battleStatus !== null
+        && user !== null
+        && battleStatus.owner_user_id === Number(user.user_id);
+
+    async function handleDeleteBattle() {
+        const parsedBattleId = Number(battleId);
+        setIsDeleting(true);
+        setDeleteError(null);
+
+        try {
+            const result = await deleteBattleAction(parsedBattleId);
+            if (!result.success) {
+                setDeleteError(result.error);
+                return;
+            }
+            setIsDeleteDialogOpen(false);
+            router.replace("/");
+        } catch (error) {
+            console.error("Impossible de supprimer la bataille", error);
+            setDeleteError("Impossible de supprimer cette bataille.");
+        } finally {
+            setIsDeleting(false);
+        }
+    }
 
     // Produit 2 ws en mode dev. Normal. N'en produit qu'un en build
     useMemo(() => {
@@ -135,7 +173,52 @@ export default function BatlePage() {
 
     return (
         <main className={styles.page}>
-            <div style={{ display: "flex", flexDirection: "column", flex: 1, height: "100%" }}>
+            <div className={styles.battleHeader}>
+                <span className={styles.battleLabel}>Bataille #{battleId}</span>
+
+                {isOwner && (
+                    <div className={styles.actions}>
+                        <button
+                            type="button"
+                            className={styles.menuButton}
+                            aria-label="Actions de la bataille"
+                            aria-haspopup="menu"
+                            aria-expanded={isMenuOpen}
+                            onClick={() => setIsMenuOpen(open => !open)}
+                        >
+                            <EllipsisVertical aria-hidden="true" size={20} />
+                        </button>
+
+                        {isMenuOpen && (
+                            <>
+                                <button
+                                    type="button"
+                                    className={styles.menuDismiss}
+                                    aria-label="Fermer le menu"
+                                    onClick={() => setIsMenuOpen(false)}
+                                />
+                                <div className={styles.actionMenu} role="menu">
+                                    <button
+                                        type="button"
+                                        className={styles.deleteMenuItem}
+                                        role="menuitem"
+                                        onClick={() => {
+                                            setIsMenuOpen(false);
+                                            setDeleteError(null);
+                                            setIsDeleteDialogOpen(true);
+                                        }}
+                                    >
+                                        <Trash2 aria-hidden="true" size={17} />
+                                        Supprimer la bataille
+                                    </button>
+                                </div>
+                            </>
+                        )}
+                    </div>
+                )}
+            </div>
+
+            <div className={styles.battleContent}>
                 <div style={{ display: "flex", flexDirection: "row", margin: 10, alignItems: "center" }}>
                     <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "start" }} className={styles.contender_div}>
                         {battleStatus ? <PlayerLeft
@@ -194,6 +277,59 @@ export default function BatlePage() {
                     {logContent}
                 </div>
             </div>
+
+            {isDeleteDialogOpen && (
+                <div
+                    className={styles.dialogBackdrop}
+                    onMouseDown={event => {
+                        if (event.target === event.currentTarget && !isDeleting) {
+                            setIsDeleteDialogOpen(false);
+                        }
+                    }}
+                >
+                    <div
+                        className={styles.dialog}
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="delete-battle-title"
+                    >
+                        <div className={styles.dialogIcon}>
+                            <Trash2 aria-hidden="true" size={22} />
+                        </div>
+                        <h2 id="delete-battle-title">Supprimer définitivement cette bataille ?</h2>
+                        <p>
+                            {battleStatus
+                                ? `${battleStatus.contender_info[0].name} contre ${battleStatus.contender_info[1].name} sera supprimée.`
+                                : `La bataille #${battleId} sera supprimée.`}
+                            {" "}Cette action est irréversible.
+                        </p>
+
+                        {deleteError && (
+                            <p className={styles.deleteError} role="alert">{deleteError}</p>
+                        )}
+
+                        <div className={styles.dialogActions}>
+                            <button
+                                type="button"
+                                className={styles.cancelButton}
+                                disabled={isDeleting}
+                                autoFocus
+                                onClick={() => setIsDeleteDialogOpen(false)}
+                            >
+                                Annuler
+                            </button>
+                            <button
+                                type="button"
+                                className={styles.confirmDeleteButton}
+                                disabled={isDeleting}
+                                onClick={handleDeleteBattle}
+                            >
+                                {isDeleting ? "Suppression..." : "Supprimer"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </main>
     );
 }

@@ -7,7 +7,7 @@ export async function getUserCoins(access_token: string, currency: string): Prom
     }).then(res => res.json()));
 }
 
-export async function burnUserCoins(access_token: string, currency: string, amount: number, idempotencyKey: string) {
+export async function burnUserCoins(access_token: string, currency: string, amount: number, idempotencyKey: string, reason: string = "Bet created") {
     const resp =  await fetch(
         `${process.env.COINS_API_URL}/burn`,
         {
@@ -20,7 +20,7 @@ export async function burnUserCoins(access_token: string, currency: string, amou
                 "currency": currency,
                 "amount": amount,
                 "idempotencyKey": idempotencyKey,
-                "reason": "Pari créé",
+                "reason": reason,
                 "destination": "Hash Contenders"
             })
         }

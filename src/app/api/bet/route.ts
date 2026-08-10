@@ -1,4 +1,5 @@
-import {createBetSchema, submitBet} from "@/services/bets/create";
+import {submitBet} from "@/services/bets/create";
+import {CreateBetSchema} from "@/services/bets/baseBet";
 import {
     BattleFinishedError,
     BattleNotFoundError,
@@ -17,7 +18,7 @@ export async function POST(request: Request) {
     const access_token = await extractUserAccessToken();
 
     const json = await request.json();
-    const bet = createBetSchema.safeParse(json);
+    const bet = CreateBetSchema.safeParse(json);
     if (bet.error) {
         return new Response(bet.error.message, {status: 400});
     }

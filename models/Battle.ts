@@ -1,5 +1,6 @@
 export type Battle = {
     id: number
+    owner_user_id: number
     are_addresses_privates: boolean
     contender_1_address: string
     contender_1_name: string

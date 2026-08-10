@@ -20,11 +20,39 @@ export async function getAllBattles(): Promise<Battle[]> {
     return await fetch(`${config.API_URL}/v1/battles`).then(data => data.json());
 }
 
-export async function createBattle(battle: CreateBattle): Promise<Battle> {
-    return await fetch(`${config.API_URL}/v1/battle`, {
+export async function deleteBattleById(battleId: number | string, accessToken: string): Promise<void> {
+    const res = await fetch(`${config.API_URL}/v1/battle/${battleId}`, {
+        method: "DELETE",
+        headers: {
+            "Authorization": accessToken
+        }
+    });
+    if (res.status === 401) {
+        throw new UnauthorizedError();
+    }
+    if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`deleteBattleById failed: ${res.status} ${res.statusText} - ${text}`);
+    }
+}
+
+export async function createBattle(battle: CreateBattle, accessToken: string): Promise<Battle> {
+    const res = await fetch(`${config.API_URL}/v1/battle`, {
         method: "POST",
+        headers: {
+            "Authorization": accessToken,
+            "Content-Type": "application/json"
+        },
         body: JSON.stringify(battle)
-    }).then(data => data.json());
+    });
+    if (res.status === 401) {
+        throw new UnauthorizedError();
+    }
+    if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`createBattle failed: ${res.status} ${res.statusText} - ${text}`);
+    }
+    return res.json();
 }
 
 async function authFetch(input: RequestInfo, init?: RequestInit) {
@@ -35,7 +63,7 @@ async function authFetch(input: RequestInfo, init?: RequestInit) {
 
     if (res.status === 401) {
         const refreshed = await refreshToken();
-        if (!refreshed) return res;
+        if (!refreshed.ok) return res;
 
         res = await fetch(input, {
             ...init,
@@ -47,9 +75,7 @@ async function authFetch(input: RequestInfo, init?: RequestInit) {
 }
 
 export async function getMe(): Promise<components["schemas"]["User"] | null> {
-    const url = `${config.AUTH_API_URL}/me`;
-    console.log(url)
-    const res = await authFetch(url);
+    const res = await authFetch(`${config.AUTH_API_URL}/me`);
     if (!res.ok) return null;
     return res.json();
 }

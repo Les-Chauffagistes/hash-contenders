@@ -4,8 +4,9 @@
 // Get a free hosted Postgres database in seconds: `npx create-db`
 
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider        = "prisma-client"
+  output          = "../src/generated/prisma"
+  previewFeatures = ["relationJoins"]
 }
 
 datasource db {
@@ -33,6 +34,11 @@ model Bet {
   amount    Int
   result    ResultStatus @default(pending)
   status    BetStatus    @default(pending)
+
+  /// Clé fournie par le client, unique par tentative de pari : deux soumissions
+  /// du même formulaire (double clic, rejeu réseau) ne créent qu'un seul pari.
+  /// Nullable pour les paris créés avant l'introduction de la clé.
+  idempotencyKey String? @unique
 
   betOnWinner BetOnWinner?
 }

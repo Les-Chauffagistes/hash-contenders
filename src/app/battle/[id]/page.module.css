@@ -8,6 +8,179 @@
   padding: 10px 10px 0px;
 }
 
+.battleHeader {
+  position: relative;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 40px;
+  padding: 0 10px 8px;
+}
+
+.battleLabel {
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.battleContent {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+}
+
+.actions {
+  position: relative;
+}
+
+.menuButton {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-alt);
+  color: var(--text-main);
+}
+
+.menuButton:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.menuDismiss {
+  position: fixed;
+  z-index: 1;
+  inset: 0;
+  border: 0;
+  background: transparent;
+  cursor: default;
+}
+
+.actionMenu {
+  position: absolute;
+  z-index: 2;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 210px;
+  padding: 6px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--bg-alt);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+}
+
+.deleteMenuItem {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #ef6a6a;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+}
+
+.deleteMenuItem:hover {
+  background: rgba(178, 36, 36, 0.14);
+}
+
+.dialogBackdrop {
+  position: fixed;
+  z-index: 100;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.68);
+}
+
+.dialog {
+  width: 100%;
+  max-width: 430px;
+  padding: 24px;
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  background: var(--bg-alt);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+}
+
+.dialogIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  margin-bottom: 16px;
+  border-radius: 50%;
+  background: rgba(178, 36, 36, 0.14);
+  color: #ef6a6a;
+}
+
+.dialog h2 {
+  margin-bottom: 10px;
+  font-size: 20px;
+}
+
+.dialog > p {
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.dialog .deleteError {
+  margin-top: 16px;
+  padding: 10px 12px;
+  border: 1px solid rgb(178, 36, 36);
+  border-radius: 8px;
+  background: rgba(178, 36, 36, 0.12);
+  color: #ef8a8a;
+}
+
+.dialogActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.cancelButton,
+.confirmDeleteButton {
+  padding: 9px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.cancelButton {
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: white;
+}
+
+.confirmDeleteButton {
+  border: 1px solid rgb(178, 36, 36);
+  background: rgb(178, 36, 36);
+  color: white;
+}
+
+.cancelButton:disabled,
+.confirmDeleteButton:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
 .page .contender_div {
   border: solid 1px var(--border-color);
   border-radius: 10px;

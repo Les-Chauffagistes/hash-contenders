@@ -1,6 +1,8 @@
 "use server";
 
 import { createBattle } from "@/app/api";
+import { extractUserAccessToken } from "@/app/api/lib/auth";
+import { UnauthorizedError } from "@/app/api/lib/exceptions";
 import { CreateBattle } from "../../models/CreateBattle";
 import { redirect } from "next/navigation";
 
@@ -17,6 +19,16 @@ export async function createBattleAction(
     prevState: FormState,
     formData: FormData
 ): Promise<FormState> {
+    let accessToken: string;
+    try {
+        accessToken = await extractUserAccessToken();
+    } catch (error) {
+        if (error instanceof UnauthorizedError) {
+            return { errors: { _form: "Vous devez être connecté pour créer une bataille." } };
+        }
+        throw error;
+    }
+
     const errors: Record<string, string> = {};
     const contender1Address = formData.get("contender_1_address");
     const contender2Address = formData.get("contender_2_address");
@@ -61,10 +73,13 @@ export async function createBattleAction(
 
     let battleId: number;
     try {
-        const res = await createBattle(battle);
+        const res = await createBattle(battle, accessToken);
         battleId = res.id;
-    } catch {
-        console.log("error submitting request")
+    } catch (e) {
+        if (e instanceof UnauthorizedError) {
+            return { errors: { _form: "Votre session a expiré. Reconnectez-vous pour créer une bataille." } };
+        }
+        console.error("error submitting request", e)
         return { errors: { _form: "Erreur serveur" } };
     }
 

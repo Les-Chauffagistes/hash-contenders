@@ -1,134 +1,109 @@
-import {PrismaClient} from "@/generated/prisma/client";
+import {Prisma, PrismaClient} from "@/generated/prisma/client";
 import {z} from "zod";
 import {getBattleStatus} from "@/app/api";
 import {burnUserCoins, getUserCoins} from "@/app/api/lib/coins";
 import {decodeAccessToken} from "@/app/api/lib/auth";
+import {BetContext, BetHandler, CreateBetSchema, CURRENCY} from "@/services/bets/baseBet";
+import {betOnWinnerHandler} from "@/services/bets/betOnWinner";
 import {
     BattleFinishedError,
     BattleNotFoundError,
     BetCreationError,
+    BetError,
     BurnFailedError,
     InsufficientBalanceError,
     InvalidBetDataError,
     InvalidBetTypeError
 } from "@/services/bets/errors";
 
-const CURRENCY = process.env.BETS_CURRENCY!;
+/**
+ * Types de paris acceptés. Ajouter un type = un fichier exportant un handler et
+ * une ligne ici ; le déroulé ci-dessous n'a pas à changer.
+ */
+const HANDLERS: Record<string, BetHandler> = {
+    [betOnWinnerHandler.type]: betOnWinnerHandler,
+};
 
-export const createBetSchema = z.object({
-    battle_id: z.number().int(),
-    amount: z.number().int(),
-    bet: z.object({
-        type: z.string()
-    }).loose()
-})
+/**
+ * Déroulé commun à tous les paris. Le handler du type concerné n'intervient que
+ * pour valider son payload, ses règles propres, et écrire sa table spécialisée.
+ */
+export async function submitBet(db: PrismaClient, data: z.infer<typeof CreateBetSchema>, access_token: string) {
+    const handler = HANDLERS[data.bet.type];
+    if (!handler) throw new InvalidBetTypeError();
 
-const betOnWinnerSchema = z.object({
-    winner_index: z.number().gte(1).lte(2).int()
-})
+    const parsed = handler.schema.safeParse(data.bet);
+    if (!parsed.success) throw new InvalidBetDataError();
 
-// Dumy example
-const betOnBestShare = z.object({
-    winner_index: z.number()
-})
-
-
-type BetResult =
-    | { type: "betOnWinner"; data: z.infer<typeof createBetSchema> & z.infer<typeof betOnWinnerSchema> }
-    | { type: "betOnBestShare"; data: z.infer<typeof createBetSchema> & z.infer<typeof betOnBestShare> }
-
-
-export function verifyBet(prisma: PrismaClient, bet: z.infer<typeof createBetSchema>): BetResult {
-    switch (bet.bet.type) {
-        case "betOnWinner": {
-            const parsed = betOnWinnerSchema.safeParse(bet.bet);
-            if (!parsed.success) throw new InvalidBetDataError();
-            return {type: "betOnWinner", data: {...bet, ...parsed.data}};
-        }
-        case "betOnBestShare": {
-            const parsed = betOnBestShare.safeParse(bet.bet);
-            if (!parsed.success) throw new InvalidBetDataError();
-            return {type: "betOnBestShare", data: {...bet, ...parsed.data}};
-        }
-        default:
-            throw new InvalidBetTypeError();
+    // Rejeu d'une soumission déjà traitée (double clic, retry réseau) : on ne
+    // recrée rien et on ne rebrûle pas de coins.
+    const previousAttempt = await db.bet.findUnique({
+        where: {idempotencyKey: data.idempotency_key},
+        select: {status: true},
+    });
+    if (previousAttempt) {
+        if (previousAttempt.status === "canceled") throw new BurnFailedError();
+        return;
     }
-}
 
-async function handleBetOnWinner(db: PrismaClient, bet: {
-    type: "betOnWinner";
-    data: z.infer<typeof createBetSchema> & z.infer<typeof betOnWinnerSchema>;
-}, access_token: string) {
-    const battleId = bet.data.battle_id;
-    const battle = await getBattleStatus(battleId);
+    const battle = await getBattleStatus(data.battle_id);
     if (!battle) throw new BattleNotFoundError();
     if (battle.is_finished) throw new BattleFinishedError();
 
-    const result = await getUserCoins(access_token, CURRENCY);
-    if (result.balance < bet.data.amount) throw new InsufficientBalanceError();
-
     const user = await decodeAccessToken(access_token);
+    const ctx: BetContext = {
+        db,
+        userId: Number.parseInt(user.user_id),
+        access_token,
+        battle,
+        submission: data,
+    };
+
+    await handler.checkPreconditions(parsed.data, ctx);
+
+    const {balance} = await getUserCoins(access_token, CURRENCY);
+    if (balance < data.amount) throw new InsufficientBalanceError();
 
     let storedBetId: string;
 
-    // Creates a 'pending' bet
+    // Crée un pari 'pending' : ligne principale et ligne spécialisée ensemble.
     try {
         await db.$transaction(async (tx) => {
-            // primary table
             const storedBet = await tx.bet.create({
                 data: {
-                    battleId: battleId.toString(),
-                    amount: bet.data.amount,
-                    userId: Number.parseInt(user.user_id)
+                    battleId: data.battle_id.toString(),
+                    amount: data.amount,
+                    userId: ctx.userId,
+                    idempotencyKey: data.idempotency_key,
                 }
-            })
+            });
 
-            // specialized table
-            await tx.betOnWinner.create({
-                data: {
-                    winnerIndex: bet.data.winner_index,
-                    betId: storedBet.id
-                }
-            })
+            await handler.persist(tx, storedBet.id, parsed.data);
 
             storedBetId = storedBet.id;
-        })
-    } catch {
+        });
+    } catch (e) {
+        // Deux soumissions concurrentes de la même clé : l'autre requête a créé
+        // le pari, celle-ci n'a rien à faire de plus.
+        if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") return;
+        // Un refus métier levé par le handler garde son sens.
+        if (e instanceof BetError) throw e;
         throw new BetCreationError();
     }
 
     try {
-        await burnUserCoins(access_token, CURRENCY, bet.data.amount, JSON.stringify(bet.data));
+        await burnUserCoins(access_token, CURRENCY, data.amount, storedBetId!, JSON.stringify(data));
     } catch {
-        // Cancel bet if burning failed
+        // Le débit a échoué : le pari ne doit pas rester actif.
         await db.bet.update({
-            where: { id: storedBetId! },
-            data: { status: "canceled" }
-        })
+            where: {id: storedBetId!},
+            data: {status: "canceled"}
+        });
         throw new BurnFailedError();
     }
+
     await db.bet.update({
-        where: {
-            id: storedBetId!
-        },
-        data: {
-            status: "settled"
-        }
-    })
-}
-
-export async function handleBet(db: PrismaClient, bet: BetResult, access_token: string) {
-    switch (bet.type) {
-        case "betOnWinner":
-            await handleBetOnWinner(db, bet, access_token);
-            break;
-
-        case "betOnBestShare":
-            break;
-    }
-}
-
-export async function submitBet(db: PrismaClient, data: z.infer<typeof createBetSchema>, access_token: string) {
-    const result = verifyBet(db, data);
-    await handleBet(db, result, access_token);
+        where: {id: storedBetId!},
+        data: {status: "settled"}
+    });
 }
