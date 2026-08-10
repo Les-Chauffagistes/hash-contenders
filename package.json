@@ -7,6 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "npm run test:unit && npm run test:integration",
+    "test:unit": "vitest run src/services/bets/create.test.ts",
+    "test:integration": "vitest run src/services/bets/create.integration.test.ts",
     "prepare": "next-ws patch"
   },
   "dependencies": {
@@ -24,6 +27,7 @@
     "ws": "^8.19.0"
   },
   "devDependencies": {
+    "@testcontainers/postgresql": "^12.1.0",
     "@types/node": "^20",
     "@types/pg": "^8.20.0",
     "@types/react": "^19",
@@ -32,10 +36,12 @@
     "eslint": "^9",
     "eslint-config-next": "16.1.1",
     "prisma": "^7.7.0",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^3.2.7"
   },
   "allowScripts": {
     "@prisma/engines@7.7.0": true,
+    "esbuild@0.28.2": true,
     "prisma@7.7.0": true,
     "sharp@0.34.5": true,
     "unrs-resolver@1.11.1": true

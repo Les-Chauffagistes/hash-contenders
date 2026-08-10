@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { decodeAccessToken } from "@/app/api/lib/auth";
 import { UnauthorizedError } from "@/app/api/lib/exceptions";
 import { prisma } from "@/server/db";
+import { getBetType } from "@/app/bets/betTypes";
 import { submitBet } from "@/services/bets/create";
 import { CreateBetSchema } from "@/services/bets/baseBet";
 import {
@@ -42,15 +43,20 @@ export async function createBetAction(
 
     const battleId = formData.get("battle_id");
     const amount = formData.get("amount");
-    const betType = formData.get("bet_type");
-    const winnerIndex = formData.get("winner_index");
     const idempotencyKey = formData.get("idempotency_key");
+
+    // Le type choisi détermine quels champs métier lire : chaque type de pari
+    // déclare son extraction dans le registre partagé avec le formulaire.
+    const betType = getBetType(formData.get("bet_type")?.toString());
+    if (!betType) return { errors: { _form: "Type de pari invalide" } };
 
     const errors: Record<string, string> = {};
 
     if (!battleId) errors.battle_id = "Veuillez sélectionner une bataille";
     if (!amount || Number(amount) <= 0) errors.amount = "Montant invalide";
-    if (!winnerIndex) errors.winner_index = "Veuillez choisir un gagnant";
+
+    const parsedFields = betType.parseFields(formData);
+    Object.assign(errors, parsedFields.errors);
 
     if (Object.keys(errors).length > 0) return { errors };
 
@@ -59,8 +65,8 @@ export async function createBetAction(
         amount: Number(amount),
         idempotency_key: idempotencyKey as string,
         bet: {
-            type: betType as string,
-            winner_index: Number(winnerIndex),
+            type: betType.id,
+            ...parsedFields.fields,
         },
     };
 

@@ -1,20 +1,36 @@
-import {z} from "zod";
+import { z } from "zod";
+import { defineBetHandler } from "@/services/bets/baseBet";
+import UnitConverter from "@/lib/UnitConverter";
+
 
 export const BetOnBestShareSchema = z.object({
-  diff: z.number()
-})
+  diff: z.string(),
+});
 
-/*
- * Pas encore de handler : il manque la table `BetOnBestShare` dans le schéma
- * Prisma pour que `persist` ait quelque chose à écrire. Tant que ce type n'est
- * pas enregistré dans HANDLERS (create.ts), une soumission `betOnBestShare` est
- * rejetée par InvalidBetTypeError plutôt que faussement acceptée.
- *
- * Pour l'implémenter :
- *  - ajouter `model BetOnBestShare { betId String @id, diff Int, bet Bet @relation(...) }`
- *  - exporter un `betOnBestShareHandler` construit avec defineBetHandler
- *  - l'ajouter au registry
- *  - implémenter `settle` : la plus haute difficulté atteinte prend 60 %, les
- *    deuxième et troisième 30 % et 10 % ; miser sur une difficulté jamais
- *    atteinte est perdant.
- */
+export const betOnBestShareHandler = defineBetHandler({
+  type: "betOnBestShare",
+  schema: BetOnBestShareSchema,
+
+  /** Un jour ne peut pas miser sur une difficulté plus faible à une de ses propres paris **/
+  async checkPreconditions(data, ctx) {
+    const parsedDiff = UnitConverter.fromStringToNumber(data.diff);
+    const conflictingBet = await ctx.db.bet.findFirst({
+      where: {
+        userId: ctx.userId,
+        battleId: ctx.submission.battle_id.toString(),
+        betOnBestShare: {diff: {gte: parsedDiff}},
+      },
+      select: {id: true},
+    });
+    if (conflictingBet) throw new Error("Pari conflictuel");
+  },
+
+  async persist(tx, betId, data) {
+    await tx.betOnBestShare.create({
+      data: {
+        diff: UnitConverter.fromStringToNumber(data.diff),
+        betId,
+      },
+    });
+  },
+});

@@ -13,7 +13,7 @@ import { Round } from "../../../../models/Hit";
 import { EllipsisVertical, HandFist, Trash2 } from "lucide-react";
 import {config} from "@/lib/config";
 import { components } from "@les-chauffagistes/authentication-types";
-import { deleteBattleAction } from "../../../../lib/actions/deleteBattle";
+import { deleteBattleAction } from "@/lib/actions/deleteBattle";
 
 
 export default function BatlePage() {

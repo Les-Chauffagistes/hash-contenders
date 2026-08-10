@@ -3,7 +3,7 @@
 import { createBattle } from "@/app/api";
 import { extractUserAccessToken } from "@/app/api/lib/auth";
 import { UnauthorizedError } from "@/app/api/lib/exceptions";
-import { CreateBattle } from "../../models/CreateBattle";
+import { CreateBattle } from "../../../models/CreateBattle";
 import { redirect } from "next/navigation";
 
 type FormState = {

@@ -27,25 +27,29 @@ enum BetStatus {
 }
 
 model Bet {
-  id        String       @id @default(uuid())
-  battleId  String
-  userId    BigInt
-  createdAt DateTime     @default(now())
-  amount    Int
-  result    ResultStatus @default(pending)
-  status    BetStatus    @default(pending)
+  id             String       @id @default(uuid())
+  battleId       String
+  userId         BigInt
+  createdAt      DateTime     @default(now())
+  amount         Int
+  result         ResultStatus @default(pending)
+  status         BetStatus    @default(pending)
+  idempotencyKey String?      @unique
 
-  /// Clé fournie par le client, unique par tentative de pari : deux soumissions
-  /// du même formulaire (double clic, rejeu réseau) ne créent qu'un seul pari.
-  /// Nullable pour les paris créés avant l'introduction de la clé.
-  idempotencyKey String? @unique
-
-  betOnWinner BetOnWinner?
+  betOnWinner    BetOnWinner?
+  betOnBestShare BetOnBestShare?
 }
 
 model BetOnWinner {
-  betId       String @id
+  betId       String @unique
   winnerIndex Int
+
+  bet Bet @relation(fields: [betId], references: [id])
+}
+
+model BetOnBestShare {
+  betId String @unique
+  diff  BigInt
 
   bet Bet @relation(fields: [betId], references: [id])
 }

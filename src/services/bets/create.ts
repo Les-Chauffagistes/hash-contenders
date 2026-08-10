@@ -15,6 +15,7 @@ import {
     InvalidBetDataError,
     InvalidBetTypeError
 } from "@/services/bets/errors";
+import { betOnBestShareHandler } from "@/services/bets/betOnBestShare";
 
 /**
  * Types de paris acceptés. Ajouter un type = un fichier exportant un handler et
@@ -22,6 +23,7 @@ import {
  */
 const HANDLERS: Record<string, BetHandler> = {
     [betOnWinnerHandler.type]: betOnWinnerHandler,
+    [betOnBestShareHandler.type]: betOnBestShareHandler,
 };
 
 /**

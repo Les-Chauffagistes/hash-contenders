@@ -1,4 +1,4 @@
-import UnitConverter from "../../../../../lib/UnitConverter"
+import UnitConverter from "../../../../lib/UnitConverter"
 import Battery from "./Battery"
 
 export type PlayerLeftProps = {

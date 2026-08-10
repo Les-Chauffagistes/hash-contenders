@@ -4,7 +4,9 @@ import { Suspense, useActionState, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { getBattleStatus, getMe, refreshToken } from "../../api";
 import { BattleStatus } from "../../../../models/BattleStatus";
-import { createBetAction, FormState } from "../../../../lib/actions/createBet";
+import { createBetAction, FormState } from "@/lib/actions/createBet";
+import { BET_TYPES, BetTypeId, DEFAULT_BET_TYPE } from "../betTypes";
+import { BET_TYPE_FORMS } from "./forms";
 import styles from "./page.module.css";
 
 function BetCreateForm() {
@@ -46,7 +48,7 @@ function BetCreateForm() {
 
   const [state, action, isPending] = useActionState(submitWithFreshSession, {});
   const [battle, setBattle] = useState<BattleStatus | null>(null);
-  const [selectedContenderIndex, setSelectedContenderIndex] = useState<number | null>(null);
+  const [betTypeId, setBetTypeId] = useState<BetTypeId>(DEFAULT_BET_TYPE);
 
   useEffect(() => {
     if (battleId) {
@@ -54,8 +56,13 @@ function BetCreateForm() {
     }
   }, [battleId]);
 
-  const contender1 = battle?.contender_info?.[0]?.name ?? "Contender 1";
-  const contender2 = battle?.contender_info?.[1]?.name ?? "Contender 2";
+  const contenders = [
+    battle?.contender_info?.[0]?.name ?? "Contender 1",
+    battle?.contender_info?.[1]?.name ?? "Contender 2",
+  ];
+
+  const selectedBetType = BET_TYPES.find(betType => betType.id === betTypeId)!;
+  const BetTypeForm = BET_TYPE_FORMS[betTypeId];
 
   return (
     <form action={action} className={styles.form}>
@@ -63,7 +70,7 @@ function BetCreateForm() {
 
       {battle && (
         <p className={styles.battleContext}>
-          {contender1} <span className={styles.vs}>vs</span> {contender2}
+          {contenders[0]} <span className={styles.vs}>vs</span> {contenders[1]}
         </p>
       )}
 
@@ -75,24 +82,45 @@ function BetCreateForm() {
       )}
 
       <input type="hidden" name="battle_id" value={battleId ?? ""}/>
-      <input type="hidden" name="bet_type" value="betOnWinner"/>
+      <input type="hidden" name="bet_type" value={betTypeId}/>
 
+      {/*
+        Le sélecteur reste sur une à deux lignes quel que soit le nombre de types
+        (seuls les noms courts sont affichés, la description est celle du type
+        actif) et partage le fieldset du formulaire métier : les champs à remplir
+        ne sont pas repoussés vers le bas quand le catalogue de paris s'allonge.
+      */}
       <fieldset className={styles.fieldset}>
-        <legend>Parier sur le gagnant</legend>
-        <div className={styles.field}>
-          <div className={styles.radioGroup}>
-            <label className={styles.radioLabel}>
-              <input type="radio" name="winner_index" value="1" onChange={e => setSelectedContenderIndex(Number(e.target.value))}/>
-              <span>{contender1}</span>
+        <legend>Type de pari</legend>
+        <div className={styles.betTypeTabs} role="radiogroup" aria-label="Type de pari">
+          {BET_TYPES.map(betType => (
+            <label
+              key={betType.id}
+              // Repris par le pseudo-élément qui réserve la largeur du libellé en gras.
+              data-label={betType.name}
+              className={`${styles.betTypeChip} ${betType.id === betTypeId ? styles.betTypeChipSelected : ""}`}
+            >
+              <input
+                className={styles.srOnly}
+                type="radio"
+                name="bet_type_choice"
+                value={betType.id}
+                checked={betType.id === betTypeId}
+                onChange={() => setBetTypeId(betType.id)}
+              />
+              {betType.name}
             </label>
-            <label className={styles.radioLabel}>
-              <input type="radio" name="winner_index" value="2" onChange={e => setSelectedContenderIndex(Number(e.target.value))}/>
-              <span>{contender2}</span>
-            </label>
-          </div>
-          {state?.errors?.winner_index && (
-            <p className={styles.errorLabel}>{state.errors.winner_index}</p>
-          )}
+          ))}
+        </div>
+
+        <p className={styles.betTypeDescription}>{selectedBetType.description}</p>
+
+        {/*
+          Le formulaire métier est remonté à chaque changement de type (`key`) :
+          les champs de l'ancien type sont démontés, donc absents du FormData.
+        */}
+        <div className={styles.betTypeFields} key={betTypeId}>
+          <BetTypeForm contenders={contenders} errors={state?.errors}/>
         </div>
       </fieldset>
 
@@ -114,15 +142,12 @@ function BetCreateForm() {
       </fieldset>
 
       <p>Un pari ne peut pas être annulé</p>
-      {selectedContenderIndex &&
-          <p>En plaçant votre pari sur {selectedContenderIndex === 1 ? contender1 : contender2}, vous renoncez à parier sur la victoire de {selectedContenderIndex === 1 ? contender2 : contender1}</p>}
 
       <button type="submit" className={styles.submitButton} disabled={isPending}>
         {isPending ? "Envoi en cours…" : "Placer le pari"}
       </button>
     </form>
-  )
-    ;
+  );
 }
 
 export default function BetCreatePage() {

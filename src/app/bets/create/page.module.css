@@ -54,6 +54,7 @@
     color: var(--text-muted);
 }
 
+.field input[type=text],
 .field input[type=number] {
     padding: 8px 12px;
     border-radius: 7px;
@@ -63,9 +64,95 @@
     font-size: 14px;
 }
 
+.field input[type=text]:focus,
 .field input[type=number]:focus {
     outline: none;
     border-color: var(--accent);
+}
+
+.betTypeTabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.betTypeChip {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 7px 14px;
+    border: 1px solid var(--border-color);
+    border-radius: 999px;
+    background-color: var(--bg-alt);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: border-color 0.2s, background-color 0.2s, color 0.2s;
+}
+
+/* Copie du libellé en gras, de hauteur nulle : elle fixe la largeur de la puce
+   sur sa variante sélectionnée, donc passer en 600 ne l'élargit plus et ne
+   décale plus ses voisines. */
+.betTypeChip::after {
+    content: attr(data-label);
+    font-weight: 600;
+    height: 0;
+    overflow: hidden;
+    visibility: hidden;
+    pointer-events: none;
+    user-select: none;
+}
+
+/* Le survol ne signale que ce qui est encore actionnable : la puce déjà active
+   garde son apparence sélectionnée. */
+.betTypeChip:not(.betTypeChipSelected):hover {
+    border-color: var(--accent-soft);
+    color: var(--text-main);
+}
+
+.betTypeChipSelected {
+    border-color: var(--accent);
+    background-color: var(--accent);
+    color: white;
+    font-weight: 600;
+    cursor: default;
+}
+
+/* La puce remplace visuellement le bouton radio, qui reste focusable au clavier. */
+.betTypeChip:has(input:focus-visible) {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.srOnly {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+.betTypeDescription {
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.4;
+    margin-top: -6px;
+}
+
+.betTypeFields {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.hint {
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.4;
 }
 
 .radioGroup {

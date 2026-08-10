@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
-import { createBattleAction } from "../../../lib/actions/createBattle";
+import { createBattleAction } from "@/lib/actions/createBattle";
 import { getBitcoinBlockHeight, getMe } from "@/app/api";
 import { config } from "@/lib/config";
 import { components } from "@les-chauffagistes/authentication-types";
