@@ -11,13 +11,17 @@ export default function BetCard({ bet }: Readonly<{ bet: UserBetListItem }>) {
     let badgeClass = "";
 
     if (bet.status === "pending") badgeClass = styles.pending;
-    if (bet.status === "confirmed") badgeClass = styles.confirmed;
     if (bet.status === "void") badgeClass = styles.void;
+    if (bet.status === "confirmed") {
+      if (bet.result == "lost") badgeClass = styles.lost
+      else if (bet.result == "won") badgeClass = styles.won
+      else badgeClass = styles.confirmed;
+    }
 
     return (
         <div className={styles.betcard}>
           <div className={styles.badgeContainer}>
-            <span className={`${styles.badge} ${badgeClass}`}>{bet.status}</span>
+            <span className={`${styles.badge} ${badgeClass}`}>{bet.result == "pending" ? bet.status : bet.result}</span>
           </div>
             <h3>{battleLabel}</h3>
             <p>{BetNames[bet.type]}</p>
