@@ -1,7 +1,7 @@
 "use client";
 
 
-import { Coins, HomeIcon, UserCircle } from "lucide-react";
+import { HomeIcon, Tickets, UserCircle } from "lucide-react";
 import styles from "./DesktopNavbar.module.css";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
@@ -21,7 +21,7 @@ export default function DesktopNavbar() {
                 </li>
                 <li className={pathname.includes("/bets") ? styles.active : ""}>
                     <Link href="/bets">
-                        <Coins />
+                        <Tickets />
                         <p>Bets</p>
                     </Link>
                 </li>

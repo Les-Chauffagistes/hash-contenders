@@ -7,6 +7,7 @@ DB_PASS=$(cat /run/secrets/db_password)
 export DATABASE_URL="postgresql://postgres:${DB_PASS}@${DB_HOST}:${DB_PORT:-5432}/${DB_NAME}"
 export COINS_API_KEY=$(cat /run/secrets/coins_api_key)
 export JWT_SECRET=$(cat /run/secrets/jwt_secret)
+export TURNSTILE_SECRET_KEY=$(cat /run/secrets/turnstile_secret_key)
 
 cat > public/config.js << CONF
 window.__CONFIG__ = {
@@ -15,7 +16,8 @@ window.__CONFIG__ = {
   WSS_URL: "${WSS_URL:-}",
   AUTH_API_URL: "${AUTH_API_URL:-}",
   AUTH_URL: "${AUTH_URL:-}",
-  BITCOIN_API_URL: "${BITCOIN_API_URL:-}"
+  BITCOIN_API_URL: "${BITCOIN_API_URL:-}",
+  TURNSTILE_SITE_KEY: "${TURNSTILE_SITE_KEY:-}"
 };
 CONF
 

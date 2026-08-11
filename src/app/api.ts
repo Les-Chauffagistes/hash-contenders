@@ -55,3 +55,33 @@ export async function getUserBets(): Promise<UserBetListItem[]> {
     }
     return res.json();
 }
+
+export async function getClaimable(): Promise<number> {
+    const res = await authFetch(`${config.BASE_URL}/api/coins/claimable`);
+    if (res.status === 401) throw new UnauthorizedError();
+    if (!res.ok) {
+        throw new Error(`Unable to fetch claimable coins: ${res.status}`);
+    }
+    return res.json();
+}
+
+export async function claimCoins(captchaToken: string): Promise<void> {
+    const res = await authFetch(`${config.BASE_URL}/api/coins/claim`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({captchaToken}),
+    });
+    if (res.status === 401) throw new UnauthorizedError();
+    if (!res.ok) {
+        throw new Error(`Unable to claim coins: ${res.status}`);
+    }
+}
+
+export async function getBalance(): Promise<number> {
+    const res = await authFetch(`${config.BASE_URL}/api/coins/balance`);
+    if (res.status === 401) throw new UnauthorizedError();
+    if (!res.ok) {
+        throw new Error(`Unable to fetch balance: ${res.status}`);
+    }
+    return await res.json();
+}

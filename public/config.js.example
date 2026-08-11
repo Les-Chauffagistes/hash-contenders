@@ -5,4 +5,5 @@ window.__CONFIG__ = {
   AUTH_API_URL: "https://api-auth.chauffagistes-btc.fr/auth",
   AUTH_URL: "https://auth.chauffagistes-btc.fr",
   BITCOIN_API_URL: "https://bitcoin.staging.chauffagistes-btc.fr",
+  TURNSTILE_SITE_KEY: "REPLACE_WITH_TURNSTILE_SITE_KEY",
 };
