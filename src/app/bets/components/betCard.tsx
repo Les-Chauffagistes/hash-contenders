@@ -1,4 +1,4 @@
-import { UserBetListItem } from "@/app/bets/types";
+import type {UserBetListItem} from "@/contracts/bets";
 
 export default function BetCard({ bet }: Readonly<{ bet: UserBetListItem }>) {
     const battleLabel = bet.battle
@@ -6,10 +6,10 @@ export default function BetCard({ bet }: Readonly<{ bet: UserBetListItem }>) {
         : `Bataille #${bet.battleId}`;
 
     return (
-        <div>
+        <div style={{padding: "10px 20px", borderRadius: 10, backgroundColor: "var(--bg-soft)"}}>
+            <h3>{battleLabel}</h3>
             <p>{bet.status}</p>
-            <p>{battleLabel}</p>
-            <p>{bet.amount} coins</p>
+            <p>{bet.amount} hashcoins</p>
         </div>
     )
 }

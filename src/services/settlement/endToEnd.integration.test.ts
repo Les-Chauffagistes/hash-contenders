@@ -9,23 +9,23 @@ import {afterAll, beforeAll, beforeEach, describe, expect, it, vi} from "vitest"
 import {PrismaClient} from "@/generated/prisma/client";
 import type {BattleStatus} from "../../../models/BattleStatus";
 
-vi.mock("@/app/api", () => ({
+vi.mock("@/clients/referee", () => ({
   getBattleStatus: vi.fn(),
 }));
 
-vi.mock("@/app/api/lib/coins", () => ({
+vi.mock("@/clients/wallet", () => ({
   transferCoins: vi.fn(),
   getUserCoins: vi.fn(),
   InsufficientCoinsError: class InsufficientCoinsError extends Error {},
 }));
 
-vi.mock("@/app/api/lib/auth", () => ({
+vi.mock("@/server/auth", () => ({
   decodeAccessToken: vi.fn(),
 }));
 
-import {getBattleStatus} from "@/app/api";
-import {getUserCoins, transferCoins} from "@/app/api/lib/coins";
-import {decodeAccessToken} from "@/app/api/lib/auth";
+import {getBattleStatus} from "@/clients/referee";
+import {getUserCoins, transferCoins} from "@/clients/wallet";
+import {decodeAccessToken} from "@/server/auth";
 import {submitBet} from "@/services/bets/create";
 import {settleBattle} from "@/services/settlement/settleBattle";
 import {dispatchOutboxBatch} from "@/services/payouts/dispatch";

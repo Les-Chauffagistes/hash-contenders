@@ -2,23 +2,23 @@ import {beforeEach, describe, expect, it, vi} from "vitest";
 import {Prisma, type PrismaClient} from "@/generated/prisma/client";
 import type {BattleStatus} from "../../../models/BattleStatus";
 
-vi.mock("@/app/api", () => ({
+vi.mock("@/clients/referee", () => ({
   getBattleStatus: vi.fn(),
 }));
 
-vi.mock("@/app/api/lib/coins", () => ({
+vi.mock("@/clients/wallet", () => ({
   transferCoins: vi.fn(),
   getUserCoins: vi.fn(),
   InsufficientCoinsError: class InsufficientCoinsError extends Error {},
 }));
 
-vi.mock("@/app/api/lib/auth", () => ({
+vi.mock("@/server/auth", () => ({
   decodeAccessToken: vi.fn(),
 }));
 
-import {getBattleStatus} from "@/app/api";
-import {transferCoins, getUserCoins, InsufficientCoinsError} from "@/app/api/lib/coins";
-import {decodeAccessToken} from "@/app/api/lib/auth";
+import {getBattleStatus} from "@/clients/referee";
+import {transferCoins, getUserCoins, InsufficientCoinsError} from "@/clients/wallet";
+import {decodeAccessToken} from "@/server/auth";
 import {
   BattleFinishedError,
   BetCreationError,

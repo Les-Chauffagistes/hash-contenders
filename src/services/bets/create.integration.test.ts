@@ -9,23 +9,23 @@ import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi} fr
 import {PrismaClient} from "@/generated/prisma/client";
 import type {BattleStatus} from "../../../models/BattleStatus";
 
-vi.mock("@/app/api", () => ({
+vi.mock("@/clients/referee", () => ({
   getBattleStatus: vi.fn(),
 }));
 
-vi.mock("@/app/api/lib/coins", () => ({
+vi.mock("@/clients/wallet", () => ({
   transferCoins: vi.fn(),
   getUserCoins: vi.fn(),
   InsufficientCoinsError: class InsufficientCoinsError extends Error {},
 }));
 
-vi.mock("@/app/api/lib/auth", () => ({
+vi.mock("@/server/auth", () => ({
   decodeAccessToken: vi.fn(),
 }));
 
-import {getBattleStatus} from "@/app/api";
-import {transferCoins, getUserCoins} from "@/app/api/lib/coins";
-import {decodeAccessToken} from "@/app/api/lib/auth";
+import {getBattleStatus} from "@/clients/referee";
+import {transferCoins, getUserCoins} from "@/clients/wallet";
+import {decodeAccessToken} from "@/server/auth";
 import {betOnWinnerHandler} from "@/services/bets/betOnWinner";
 import {submitBet} from "@/services/bets/create";
 import {EscrowDebitFailedError} from "@/services/bets/errors";
@@ -173,7 +173,7 @@ describe("submitBet avec PostgreSQL", () => {
 
   it("conserve le pari en void et l'outbox en failed lorsque le débit est refusé définitivement", async () => {
     const idempotencyKey = "1215178c-8117-4432-a24e-f9d7ab0b4f6b";
-    const {InsufficientCoinsError} = await import("@/app/api/lib/coins");
+    const {InsufficientCoinsError} = await import("@/clients/wallet");
     vi.mocked(transferCoins).mockRejectedValueOnce(new InsufficientCoinsError());
 
     await expect(

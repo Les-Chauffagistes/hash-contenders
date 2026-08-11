@@ -1,5 +1,5 @@
 import {PrismaClient} from "@/generated/prisma/client";
-import {getAllBattles} from "@/app/api";
+import {getAllBattles} from "@/clients/referee";
 import {settleBattle} from "@/services/settlement/settleBattle";
 
 /**

@@ -1,6 +1,7 @@
 import {z} from "zod";
 import {Prisma, PrismaClient} from "@/generated/prisma/client";
 import {BattleStatus} from "../../../models/BattleStatus";
+import type {BetTypeId} from "@/contracts/bets";
 
 
 export const CURRENCY = process.env.BETS_CURRENCY!;
@@ -59,7 +60,7 @@ export type ConfirmedBet<TPersisted> = {
  */
 export interface BetHandler<T extends z.ZodType = z.ZodType, TPersisted = unknown> {
   /** Discriminant reçu dans `bet.type`. */
-  readonly type: string;
+  readonly type: BetTypeId;
 
   /** Forme du payload spécifique. Le parsing est fait par le tronc commun. */
   readonly schema: T;

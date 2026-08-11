@@ -8,12 +8,12 @@ import {
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
 import {PrismaClient} from "@/generated/prisma/client";
 
-vi.mock("@/app/api/lib/coins", () => ({
+vi.mock("@/clients/wallet", () => ({
   transferCoins: vi.fn(),
   InsufficientCoinsError: class InsufficientCoinsError extends Error {},
 }));
 
-import {transferCoins, InsufficientCoinsError} from "@/app/api/lib/coins";
+import {transferCoins, InsufficientCoinsError} from "@/clients/wallet";
 import {dispatchOutboxBatch} from "@/services/payouts/dispatch";
 
 const execFileAsync = promisify(execFile);

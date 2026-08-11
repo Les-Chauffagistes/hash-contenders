@@ -1,6 +1,6 @@
 import {Prisma, PrismaClient} from "@/generated/prisma/client";
 import {CURRENCY} from "@/services/bets/baseBet";
-import {InsufficientCoinsError, transferCoins} from "@/app/api/lib/coins";
+import {InsufficientCoinsError, transferCoins} from "@/clients/wallet";
 import {escrowUserId} from "@/services/payouts/escrow";
 import {parseBetDebitKey} from "@/services/payouts/idempotencyKeys";
 

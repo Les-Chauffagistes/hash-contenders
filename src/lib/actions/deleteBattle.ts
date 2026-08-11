@@ -1,8 +1,8 @@
 "use server";
 
-import { deleteBattleById } from "@/app/api";
-import { extractUserAccessToken } from "@/app/api/lib/auth";
-import { UnauthorizedError } from "@/app/api/lib/exceptions";
+import { deleteBattleById } from "@/clients/referee";
+import { extractUserAccessToken } from "@/server/auth";
+import { UnauthorizedError } from "@/lib/errors";
 
 type DeleteBattleResult =
     | { success: true }

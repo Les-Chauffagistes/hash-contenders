@@ -1,8 +1,8 @@
 "use server";
 
 import { cookies } from "next/headers";
-import { decodeAccessToken } from "@/app/api/lib/auth";
-import { UnauthorizedError } from "@/app/api/lib/exceptions";
+import { decodeAccessToken } from "@/server/auth";
+import { UnauthorizedError } from "@/lib/errors";
 import { prisma } from "@/server/db";
 import { getBetType } from "@/app/bets/betTypes";
 import { submitBet } from "@/services/bets/create";

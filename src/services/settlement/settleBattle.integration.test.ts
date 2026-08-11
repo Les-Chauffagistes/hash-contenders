@@ -9,11 +9,11 @@ import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi} fr
 import {PrismaClient} from "@/generated/prisma/client";
 import type {BattleStatus} from "../../../models/BattleStatus";
 
-vi.mock("@/app/api", () => ({
+vi.mock("@/clients/referee", () => ({
   getBattleStatus: vi.fn(),
 }));
 
-import {getBattleStatus} from "@/app/api";
+import {getBattleStatus} from "@/clients/referee";
 import {settleBattle} from "@/services/settlement/settleBattle";
 
 const execFileAsync = promisify(execFile);

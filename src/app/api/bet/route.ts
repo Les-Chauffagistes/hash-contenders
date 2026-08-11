@@ -9,7 +9,7 @@ import {
     InvalidBetDataError,
     InvalidBetTypeError,
 } from "@/services/bets/errors";
-import {extractUserAccessToken} from "../lib/auth";
+import {extractUserAccessToken} from "@/server/auth";
 import {prisma} from "@/server/db";
 import {NextResponse} from "next/server";
 

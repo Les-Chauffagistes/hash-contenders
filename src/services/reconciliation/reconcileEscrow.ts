@@ -1,5 +1,5 @@
 import {PrismaClient} from "@/generated/prisma/client";
-import {getSystemAccountBalance} from "@/app/api/lib/coins";
+import {getSystemAccountBalance} from "@/clients/wallet";
 import {escrowUserId} from "@/services/payouts/escrow";
 import {CURRENCY} from "@/services/bets/baseBet";
 

@@ -8,8 +8,9 @@
  */
 
 import UnitConverter, { UNIT_VALUE_REGEX } from "@/lib/UnitConverter";
+import type {BetTypeId} from "@/contracts/bets";
 
-export type BetTypeId = "betOnWinner" | "betOnBestShare";
+export type {BetTypeId} from "@/contracts/bets";
 
 /** Champs métier extraits du formulaire, ou erreurs par champ à réafficher. */
 export type ParsedBetFields = {

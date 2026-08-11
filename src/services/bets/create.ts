@@ -1,10 +1,10 @@
 import {Prisma, PrismaClient} from "@/generated/prisma/client";
 import {z} from "zod";
-import {getBattleStatus} from "@/app/api";
-import {getUserCoins, transferCoins, InsufficientCoinsError} from "@/app/api/lib/coins";
-import {decodeAccessToken} from "@/app/api/lib/auth";
+import {getBattleStatus} from "@/clients/referee";
+import {getUserCoins, transferCoins, InsufficientCoinsError} from "@/clients/wallet";
+import {decodeAccessToken} from "@/server/auth";
 import {BetContext, CreateBetSchema, CURRENCY} from "@/services/bets/baseBet";
-import {BET_HANDLERS} from "@/services/bets/registry";
+import {getBetHandler} from "@/services/bets/registry";
 import {
     BattleFinishedError,
     BattleNotFoundError,
@@ -28,7 +28,7 @@ import { betDebitKey } from "@/services/payouts/idempotencyKeys";
  * réseau, qui rend un crash survivable — voir payout_outbox dans schema.prisma.
  */
 export async function submitBet(db: PrismaClient, data: z.infer<typeof CreateBetSchema>, access_token: string) {
-    const handler = BET_HANDLERS[data.bet.type];
+    const handler = getBetHandler(data.bet.type);
     if (!handler) throw new InvalidBetTypeError();
 
     const parsed = handler.schema.safeParse(data.bet);

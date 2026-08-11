@@ -1,4 +1,4 @@
-import {getBattleStatus} from "@/app/api";
+import {getBattleStatus} from "@/clients/referee";
 import type {BattleResult} from "@/services/bets/baseBet";
 
 /**

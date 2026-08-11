@@ -1,17 +1,28 @@
-import {decodeAccessToken, extractUserAccessToken} from "@/app/api/lib/auth";
-import {getBattlesByIds, getUserBets, mergeBetsWithBattles} from "@/app/services/bets";
+import {getBattlesByIds} from "@/clients/referee";
+import {UnauthorizedError} from "@/lib/errors";
 import {prisma} from "@/server/db";
+import {extractAuthenticatedUser} from "@/server/auth";
+import {
+    findUserBets,
+    mergeBetsWithBattles,
+} from "@/services/bets/read";
 import {NextResponse} from "next/server";
-import {UnauthorizedError} from "@/app/api/lib/exceptions";
+import {toUserBetListItem} from "@/app/api/bets/mapper";
 
-export async function GET(req: Request) {
+export async function GET() {
     try {
-        const access_token = await extractUserAccessToken();
-        const user = await decodeAccessToken(access_token);
-        const bets = await getUserBets(prisma, user);
-        const battleIds = [...new Set(bets.map((bet) => Number(bet.battleId)).filter(Number.isFinite))];
+        const {user} = await extractAuthenticatedUser();
+        const bets = await findUserBets(prisma, user);
+        const battleIds = [
+            ...new Set(
+                bets
+                    .map((bet) => Number(bet.battleId))
+                    .filter(Number.isSafeInteger),
+            ),
+        ];
         const battles = await getBattlesByIds(battleIds);
-        return NextResponse.json(mergeBetsWithBattles(bets, battles));
+        const items = mergeBetsWithBattles(bets, battles).map(toUserBetListItem);
+        return NextResponse.json(items);
     } catch (error) {
         if (error instanceof UnauthorizedError) {
             return NextResponse.json({"error": "Unauthorized"}, {status: 401});

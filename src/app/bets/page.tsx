@@ -4,7 +4,7 @@ import styles from "./page.module.css";
 import {useEffect, useState} from "react";
 import {getUserBets} from "@/app/api";
 import BetCard from "@/app/bets/components/betCard";
-import {UserBetListItem} from "@/app/bets/types";
+import type {UserBetListItem} from "@/contracts/bets";
 
 export default function BetsPage() {
     const [bets, setBets] = useState<UserBetListItem[] | null>(null)
@@ -18,7 +18,7 @@ export default function BetsPage() {
             <h1 className={styles.title}>Mes paris</h1>
             {bets === null && <p className={styles.empty}>Récupération....</p>}
             {bets?.length == 0 && <p>Aucun pari</p>}
-            {(bets !== null && bets?.length != 0) && <div>
+            {(bets !== null && bets?.length != 0) && <div style={{gap: 10, display: "flex", flexDirection: "column"}}>
                 {bets.map((bet) => <BetCard key={bet.id} bet={bet} />)}
             </div>}
         </main>
