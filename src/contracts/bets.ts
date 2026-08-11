@@ -39,3 +39,8 @@ type SpecializedBet = {
 }[BetTypeId];
 
 export type UserBetListItem = BetListItemBase & SpecializedBet;
+
+export const BetNames: Record<BetTypeId, string> = {
+  betOnWinner: "Pari sur le gagnant",
+  betOnBestShare: "Pari sur le meilleur share",
+};

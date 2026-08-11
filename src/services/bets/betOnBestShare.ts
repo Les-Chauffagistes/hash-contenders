@@ -51,16 +51,21 @@ export const betOnBestShareHandler = defineBetHandler<typeof BetOnBestShareSchem
   },
 
   /**
-   * Règle provisoire, isolée ici pour rester facile à corriger : un pari
-   * gagne si la difficulté prédite a bien été atteinte ou dépassée par la
-   * bataille (cohérent avec checkPreconditions, qui suppose des paris à la
-   * hausse — un pari plus faible qu'un précédent est refusé). À confirmer
-   * avec le produit ; ne touche à rien d'autre dans le settlement si la
-   * règle change.
+   * Règle provisoire, isolée ici pour rester facile à corriger : gagne le
+   * pari dont la difficulté prédite est la plus élevée parmi celles
+   * effectivement atteintes par la bataille (cohérent avec
+   * checkPreconditions, qui suppose des paris à la hausse — un pari plus
+   * faible qu'un précédent est refusé). À égalité de difficulté, le pot est
+   * réparti au prorata des mises. À confirmer avec le produit ; ne touche à
+   * rien d'autre dans le settlement si la règle change.
    */
   computePayouts(bets: ConfirmedBet<Persisted>[], battleResult: BattleResult): Map<bigint, number> {
-    const winners = bets.filter((bet) => Number(bet.specialized.diff) <= battleResult.maxDiffAchieved);
-    if (winners.length === 0) return new Map();
+    const maxAchieved = BigInt(Math.floor(battleResult.maxDiffAchieved));
+    const reached = bets.filter((bet) => bet.specialized.diff <= maxAchieved);
+    if (reached.length === 0) return new Map();
+
+    const bestDiff = reached.reduce((max, bet) => (bet.specialized.diff > max ? bet.specialized.diff : max), reached[0].specialized.diff);
+    const winners = reached.filter((bet) => bet.specialized.diff === bestDiff);
 
     const pot = bets.reduce((sum, bet) => sum + bet.amount, 0);
     return splitProportionally(pot, winners);

@@ -214,6 +214,59 @@ describe("settleBattle", () => {
     expect(winnerPayouts.map((p) => Number(p.amount)).sort((a, b) => a - b)).toEqual([50, 100]);
   });
 
+  it("betOnBestShare : seule la difficulté atteinte la plus élevée gagne, les paris plus faibles perdent", async () => {
+    vi.mocked(getBattleStatus).mockResolvedValue(
+      battleStatus({
+        battle_id: 10,
+        hits: [
+          {date: new Date(), battle_id: 10, contender_1_best_diff: 500, contender_2_best_diff: 100, block_height: 1, winner: null},
+        ],
+      }),
+    );
+
+    await createConfirmedBetOnBestShare("10", 90, 40, BigInt(100), "k16"); // atteint, mais plus faible
+    await createConfirmedBetOnBestShare("10", 91, 25, BigInt(400), "k17"); // atteint, le plus élevé -> gagne
+    await createConfirmedBetOnBestShare("10", 92, 35, BigInt(600), "k18"); // non atteint
+
+    await settleBattle(db, 10);
+
+    const payouts = await db.payoutOutbox.findMany({where: {battleId: "10"}});
+    expect(payouts).toHaveLength(1);
+    expect(payouts[0].direction).toBe("escrow_to_winner");
+    expect(payouts[0].userId).toBe(BigInt(91));
+    expect(Number(payouts[0].amount)).toBe(100);
+
+    const results = await db.bet.findMany({where: {battleId: "10"}, orderBy: {userId: "asc"}});
+    expect(results.map((b) => b.result)).toEqual(["lost", "won", "lost"]);
+  });
+
+  it("betOnBestShare : les ex aequo sur la difficulté gagnante se partagent le pot au prorata", async () => {
+    vi.mocked(getBattleStatus).mockResolvedValue(
+      battleStatus({
+        battle_id: 11,
+        hits: [
+          {date: new Date(), battle_id: 11, contender_1_best_diff: 500, contender_2_best_diff: 100, block_height: 1, winner: null},
+        ],
+      }),
+    );
+
+    await createConfirmedBetOnBestShare("11", 100, 30, BigInt(400), "k19"); // ex aequo
+    await createConfirmedBetOnBestShare("11", 101, 70, BigInt(400), "k20"); // ex aequo
+    await createConfirmedBetOnBestShare("11", 102, 50, BigInt(600), "k21"); // non atteint
+
+    await settleBattle(db, 11);
+
+    const settlement = await db.battleSettlement.findUnique({where: {battleId: "11"}});
+    expect(settlement?.potTotal).toBe(BigInt(150));
+
+    const payouts = await db.payoutOutbox.findMany({where: {battleId: "11", direction: "escrow_to_winner"}});
+    const byUser = new Map(payouts.map((p) => [p.userId.toString(), Number(p.amount)]));
+    expect(byUser.get("100")).toBe(Math.floor((150 * 30) / 100));
+    expect(byUser.get("101")).toBe(150 - Math.floor((150 * 30) / 100));
+    expect(payouts.reduce((sum, p) => sum + Number(p.amount), 0)).toBe(150);
+    expect(await db.payoutOutbox.count({where: {battleId: "11", direction: "escrow_to_refund"}})).toBe(0);
+  });
+
   it("exactly-once : deux settlements concurrents ne produisent qu'un seul jeu de payouts", async () => {
     vi.mocked(getBattleStatus).mockResolvedValue(battleStatus({battle_id: 8}));
 
