@@ -1,13 +1,16 @@
 import {z} from "zod";
-import {BetContext, defineBetHandler, TransactionClient} from "@/services/bets/baseBet";
+import {BattleResult, BetContext, ConfirmedBet, defineBetHandler, TransactionClient} from "@/services/bets/baseBet";
 import {BetCreationError} from "./errors";
+import {splitProportionally} from "@/services/settlement/splitProportionally";
 
 
 export const BetOnWinnerSchema = z.object({
   winner_index: z.number().gte(1).lte(2).int(),
 });
 
-export const betOnWinnerHandler = defineBetHandler({
+type Persisted = {winnerIndex: number};
+
+export const betOnWinnerHandler = defineBetHandler<typeof BetOnWinnerSchema, Persisted>({
   type: "betOnWinner",
   schema: BetOnWinnerSchema,
 
@@ -31,5 +34,29 @@ export const betOnWinnerHandler = defineBetHandler({
         betId,
       },
     });
+  },
+
+  async loadConfirmedBets(tx: TransactionClient, battleId: string): Promise<ConfirmedBet<Persisted>[]> {
+    const rows = await tx.bet.findMany({
+      where: {battleId, status: "confirmed", betOnWinner: {isNot: null}},
+      include: {betOnWinner: true},
+    });
+    return rows.map((row) => ({
+      id: row.id,
+      userId: row.userId,
+      amount: row.amount,
+      specialized: {winnerIndex: row.betOnWinner!.winnerIndex},
+    }));
+  },
+
+  /** Gagne qui a prédit l'index du vainqueur réel. Égalité (winnerIndex null) : personne ne peut gagner. */
+  computePayouts(bets: ConfirmedBet<Persisted>[], battleResult: BattleResult): Map<bigint, number> {
+    if (battleResult.winnerIndex === null) return new Map();
+
+    const winners = bets.filter((bet) => bet.specialized.winnerIndex === battleResult.winnerIndex);
+    if (winners.length === 0) return new Map();
+
+    const pot = bets.reduce((sum, bet) => sum + bet.amount, 0);
+    return splitProportionally(pot, winners);
   },
 });

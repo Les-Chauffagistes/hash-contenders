@@ -4,7 +4,7 @@ import {
     BattleFinishedError,
     BattleNotFoundError,
     BetCreationError,
-    BurnFailedError,
+    EscrowDebitFailedError,
     InsufficientBalanceError,
     InvalidBetDataError,
     InvalidBetTypeError,
@@ -30,7 +30,7 @@ export async function POST(request: Request) {
         if (e instanceof BattleFinishedError) return NextResponse.json({error: "La bataille est déjà terminée"}, {status: 409});
         if (e instanceof InsufficientBalanceError) return NextResponse.json({error: "Solde insuffisant pour placer ce pari"}, {status: 422});
         if (e instanceof BetCreationError) return NextResponse.json({error: "Impossible de créer le pari, veuillez réessayer"}, {status: 500});
-        if (e instanceof BurnFailedError) return NextResponse.json({error: "Impossible de débiter les coins, pari annulé"}, {status: 502});
+        if (e instanceof EscrowDebitFailedError) return NextResponse.json({error: "Impossible de débiter les coins, pari annulé"}, {status: 502});
         if (e instanceof InvalidBetTypeError) return NextResponse.json({error: "Type de pari invalide"}, {status: 400});
         if (e instanceof InvalidBetDataError) return NextResponse.json({error: "Données du pari invalides"}, {status: 400});
         console.error("[POST /api/bet]", e);

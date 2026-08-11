@@ -11,7 +11,7 @@ import {
     BattleFinishedError,
     BattleNotFoundError,
     BetCreationError,
-    BurnFailedError,
+    EscrowDebitFailedError,
     InsufficientBalanceError,
     InvalidBetDataError,
     InvalidBetTypeError,
@@ -84,7 +84,7 @@ export async function createBetAction(
         if (e instanceof BattleFinishedError) return { errors: { _form: "La bataille est déjà terminée" } };
         if (e instanceof InsufficientBalanceError) return { errors: { _form: "Solde insuffisant pour placer ce pari" } };
         if (e instanceof BetCreationError) return { errors: { _form: "Impossible de créer le pari, veuillez réessayer" } };
-        if (e instanceof BurnFailedError) return { errors: { _form: "Impossible de débiter les coins, pari annulé" } };
+        if (e instanceof EscrowDebitFailedError) return { errors: { _form: "Impossible de débiter les coins, pari annulé" } };
         if (e instanceof InvalidBetTypeError) return { errors: { _form: "Type de pari invalide" } };
         if (e instanceof InvalidBetDataError) return { errors: { _form: "Données du pari invalides" } };
         console.error("[createBetAction]", e);

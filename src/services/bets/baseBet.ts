@@ -30,12 +30,34 @@ export type BetContext = {
   submission: z.infer<typeof CreateBetSchema>;
 };
 
+/** Résultat d'une bataille figé au moment du settlement, dérivé du référee Python. */
+export type BattleResult = {
+  battleId: string;
+  isFinished: boolean;
+  /** null : bataille terminée sur égalité (max de rounds atteint, PV égaux). */
+  winnerIndex: 1 | 2 | null;
+  /** Meilleure difficulté atteinte, tous rounds et contenders confondus. */
+  maxDiffAchieved: number;
+};
+
+/** Pari confirmed chargé pour le settlement, avec sa donnée spécialisée déjà jointe. */
+export type ConfirmedBet<TPersisted> = {
+  id: string;
+  userId: bigint;
+  amount: number;
+  specialized: TPersisted;
+};
+
 /**
  * Contrat que chaque type de pari implémente. Le déroulé commun — idempotence,
- * état de la bataille, solde, création du `Bet`, burn des coins et rollback —
+ * état de la bataille, solde, création du `Bet`, débit escrow et rollback —
  * vit une seule fois dans `submitBet` ; un handler ne décrit que ses différences.
+ *
+ * `TPersisted` est la forme de la table spécialisée une fois en base (ex.
+ * `{winnerIndex: number}`), distincte de `T` qui est la forme du payload
+ * d'entrée — `persist` convertit de l'un à l'autre.
  */
-export interface BetHandler<T extends z.ZodType = z.ZodType> {
+export interface BetHandler<T extends z.ZodType = z.ZodType, TPersisted = unknown> {
   /** Discriminant reçu dans `bet.type`. */
   readonly type: string;
 
@@ -55,11 +77,27 @@ export interface BetHandler<T extends z.ZodType = z.ZodType> {
    */
   persist(tx: TransactionClient, betId: string, data: z.infer<T>): Promise<void>;
 
-  /** Règlement en fin de bataille. Pas encore appelé par le tronc commun. */
-  settle?(ctx: BetContext): Promise<void>;
+  /**
+   * Charge, pour une bataille, tous les paris `confirmed` de ce type avec
+   * leur ligne spécialisée. Utilisé par `settleBattle`, dans la transaction
+   * de settlement — chaque type sait requêter sa propre table jointe.
+   */
+  loadConfirmedBets(tx: TransactionClient, battleId: string): Promise<ConfirmedBet<TPersisted>[]>;
+
+  /**
+   * Répartition pari-mutuel figée au settlement : reçoit tous les paris
+   * confirmed de ce type pour la bataille et son résultat, rend la part de
+   * chaque gagnant (userId -> montant). L'appelant doit redistribuer
+   * exactement le pot du type (somme des `amount` reçus) — voir
+   * `splitProportionally`. Une Map vide signifie "aucun gagnant" :
+   * `settleBattle` rembourse alors chaque parieur de ce type sa propre mise.
+   */
+  computePayouts(bets: ConfirmedBet<TPersisted>[], battleResult: BattleResult): Map<bigint, number>;
 }
 
 /** Préserve l'inférence du schéma dans les signatures du handler. */
-export function defineBetHandler<T extends z.ZodType>(handler: BetHandler<T>): BetHandler<T> {
+export function defineBetHandler<T extends z.ZodType, TPersisted>(
+  handler: BetHandler<T, TPersisted>,
+): BetHandler<T, TPersisted> {
   return handler;
 }

@@ -8,8 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "test": "npm run test:unit && npm run test:integration",
-    "test:unit": "vitest run src/services/bets/create.test.ts",
-    "test:integration": "vitest run src/services/bets/create.integration.test.ts",
+    "test:unit": "vitest run --exclude '**/*.integration.test.ts'",
+    "test:integration": "vitest run integration",
     "prepare": "next-ws patch"
   },
   "dependencies": {

@@ -14,8 +14,9 @@ vi.mock("@/app/api", () => ({
 }));
 
 vi.mock("@/app/api/lib/coins", () => ({
-  burnUserCoins: vi.fn(),
+  transferCoins: vi.fn(),
   getUserCoins: vi.fn(),
+  InsufficientCoinsError: class InsufficientCoinsError extends Error {},
 }));
 
 vi.mock("@/app/api/lib/auth", () => ({
@@ -23,11 +24,11 @@ vi.mock("@/app/api/lib/auth", () => ({
 }));
 
 import {getBattleStatus} from "@/app/api";
-import {burnUserCoins, getUserCoins} from "@/app/api/lib/coins";
+import {transferCoins, getUserCoins} from "@/app/api/lib/coins";
 import {decodeAccessToken} from "@/app/api/lib/auth";
 import {betOnWinnerHandler} from "@/services/bets/betOnWinner";
 import {submitBet} from "@/services/bets/create";
-import {BurnFailedError} from "@/services/bets/errors";
+import {EscrowDebitFailedError} from "@/services/bets/errors";
 
 const execFileAsync = promisify(execFile);
 
@@ -77,10 +78,11 @@ describe("submitBet avec PostgreSQL", () => {
       pseudo: "mineur",
     });
     vi.mocked(getUserCoins).mockResolvedValue({balance: 1_000});
-    vi.mocked(burnUserCoins).mockResolvedValue(undefined);
+    vi.mocked(transferCoins).mockResolvedValue(undefined);
   });
 
   afterEach(async () => {
+    await db.payoutOutbox.deleteMany();
     await db.betOnWinner.deleteMany();
     await db.betOnBestShare.deleteMany();
     await db.bet.deleteMany();
@@ -115,12 +117,23 @@ describe("submitBet avec PostgreSQL", () => {
       battleId: "123",
       userId: BigInt(42),
       amount: 50,
-      status: "settled",
+      status: "confirmed",
       result: "pending",
       betOnWinner: {
         winnerIndex: 2,
       },
       betOnBestShare: null,
+    });
+
+    const outboxRow = await db.payoutOutbox.findUnique({
+      where: {idempotencyKey: `bet:123:${storedBet!.id}`},
+    });
+    expect(outboxRow).toMatchObject({
+      battleId: "123",
+      userId: BigInt(42),
+      amount: BigInt(50),
+      direction: "debit_to_escrow",
+      status: "dispatched",
     });
   });
 
@@ -150,7 +163,7 @@ describe("submitBet avec PostgreSQL", () => {
     });
 
     expect(storedBet).toMatchObject({
-      status: "settled",
+      status: "confirmed",
       betOnWinner: null,
       betOnBestShare: {
         diff: BigInt(2_500_000_000),
@@ -158,9 +171,10 @@ describe("submitBet avec PostgreSQL", () => {
     });
   });
 
-  it("conserve le pari en canceled lorsque le débit échoue", async () => {
+  it("conserve le pari en void et l'outbox en failed lorsque le débit est refusé définitivement", async () => {
     const idempotencyKey = "1215178c-8117-4432-a24e-f9d7ab0b4f6b";
-    vi.mocked(burnUserCoins).mockRejectedValueOnce(new Error("coins API unavailable"));
+    const {InsufficientCoinsError} = await import("@/app/api/lib/coins");
+    vi.mocked(transferCoins).mockRejectedValueOnce(new InsufficientCoinsError());
 
     await expect(
       submitBet(
@@ -176,7 +190,7 @@ describe("submitBet avec PostgreSQL", () => {
         },
         "access-token",
       ),
-    ).rejects.toBeInstanceOf(BurnFailedError);
+    ).rejects.toBeInstanceOf(EscrowDebitFailedError);
 
     const storedBet = await db.bet.findUnique({
       where: {idempotencyKey},
@@ -184,11 +198,43 @@ describe("submitBet avec PostgreSQL", () => {
     });
 
     expect(storedBet).toMatchObject({
-      status: "canceled",
+      status: "void",
       betOnWinner: {
         winnerIndex: 1,
       },
     });
+
+    const outboxRow = await db.payoutOutbox.findUnique({
+      where: {idempotencyKey: `bet:123:${storedBet!.id}`},
+    });
+    expect(outboxRow).toMatchObject({status: "failed"});
+  });
+
+  it("laisse le pari et l'outbox pending lorsque le wallet échoue pour une raison transitoire", async () => {
+    const idempotencyKey = "6f5f5e59-2f76-4f0a-9f38-6a1b0d0f7f19";
+    vi.mocked(transferCoins).mockRejectedValueOnce(new Error("coins API unavailable"));
+
+    await submitBet(
+      db,
+      {
+        battle_id: 123,
+        amount: 50,
+        idempotency_key: idempotencyKey,
+        bet: {
+          type: "betOnWinner",
+          winner_index: 1,
+        },
+      },
+      "access-token",
+    );
+
+    const storedBet = await db.bet.findUnique({where: {idempotencyKey}});
+    expect(storedBet).toMatchObject({status: "pending"});
+
+    const outboxRow = await db.payoutOutbox.findUnique({
+      where: {idempotencyKey: `bet:123:${storedBet!.id}`},
+    });
+    expect(outboxRow).toMatchObject({status: "pending"});
   });
 
   it("ne crée et ne débite qu'une fois lors d'un rejeu concurrent", async () => {
@@ -212,7 +258,7 @@ describe("submitBet avec PostgreSQL", () => {
         where: {idempotencyKey: submission.idempotency_key},
       }),
     ).toBe(1);
-    expect(burnUserCoins).toHaveBeenCalledOnce();
+    expect(transferCoins).toHaveBeenCalledOnce();
   });
 
   it("rollback la ligne Bet si l'insertion spécialisée viole une contrainte", async () => {
