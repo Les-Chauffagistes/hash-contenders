@@ -3,16 +3,21 @@
     padding: 20px 24px;
     border-radius: var(--radius);
     border: 1px solid var(--border-color);
-    transition: transform 0.2s, border-color 0.2s;
+    transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
     display: flex;
     flex-direction: column;
     gap: 16px;
 }
 
-.battlecard:hover {
-    cursor: pointer;
-    transform: scale(1.03);
-    border-color: var(--accent);
+/* Le conteneur de liste (.main) réserve désormais une marge tout autour
+   (voir page.module.css) pour que ce zoom ne soit pas rogné par le scroll. */
+@media (hover: hover) and (pointer: fine) {
+    .battlecard:hover {
+        cursor: pointer;
+        transform: scale(1.03);
+        border-color: var(--accent);
+        box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+    }
 }
 
 .header {
@@ -94,12 +99,21 @@
     font-size: 0.75rem;
     font-weight: 600;
     cursor: pointer;
-    opacity: 0;
     transition: opacity 0.15s, background-color 0.15s;
 }
 
-.battlecard:hover .betButton {
-    opacity: 1;
+/* Le survol n'existe pas sur tactile : le bouton ne reste caché en attente d'un
+   hover que sur les pointeurs qui le supportent réellement (souris). Sur
+   tactile, il est visible en permanence. */
+@media (hover: hover) and (pointer: fine) {
+    .betButton {
+        opacity: 0;
+    }
+
+    .battlecard:hover .betButton,
+    .battlecard:focus-within .betButton {
+        opacity: 1;
+    }
 }
 
 .betButton:hover {

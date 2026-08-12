@@ -1,5 +1,5 @@
 import {components} from "@les-chauffagistes/authentication-types"
-import type {UserBetListItem} from "@/contracts/bets";
+import type {UserBetsOverview} from "@/contracts/bets";
 import {UnauthorizedError} from "@/lib/errors";
 import {config} from "@/lib/config";
 
@@ -47,7 +47,7 @@ export async function logOut() {
     })
 }
 
-export async function getUserBets(): Promise<UserBetListItem[]> {
+export async function getUserBetsOverview(): Promise<UserBetsOverview> {
     const res = await authFetch(`${config.BASE_URL}/api/bets`);
     if (res.status === 401) throw new UnauthorizedError();
     if (!res.ok) {

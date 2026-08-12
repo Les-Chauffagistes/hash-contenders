@@ -2,17 +2,17 @@ import {getBattlesByIds} from "@/clients/referee";
 import {UnauthorizedError} from "@/lib/errors";
 import {prisma} from "@/server/db";
 import {extractAuthenticatedUser} from "@/server/auth";
-import {
-    findUserBets,
-    mergeBetsWithBattles,
-} from "@/services/bets/read";
+import {findUserBets, findUserPayouts} from "@/services/bets/read";
 import {NextResponse} from "next/server";
-import {toUserBetListItem} from "@/app/api/bets/mapper";
+import {toUserBetsOverview} from "@/app/api/bets/mapper";
 
 export async function GET() {
     try {
         const {user} = await extractAuthenticatedUser();
-        const bets = await findUserBets(prisma, user);
+        const [bets, payouts] = await Promise.all([
+            findUserBets(prisma, user),
+            findUserPayouts(prisma, user),
+        ]);
         const battleIds = [
             ...new Set(
                 bets
@@ -21,8 +21,7 @@ export async function GET() {
             ),
         ];
         const battles = await getBattlesByIds(battleIds);
-        const items = mergeBetsWithBattles(bets, battles).map(toUserBetListItem);
-        return NextResponse.json(items);
+        return NextResponse.json(toUserBetsOverview(bets, battles, payouts));
     } catch (error) {
         if (error instanceof UnauthorizedError) {
             return NextResponse.json({"error": "Unauthorized"}, {status: 401});

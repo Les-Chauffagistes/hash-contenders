@@ -1,0 +1,90 @@
+.player {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-width: 0;
+}
+
+.playerEnd {
+    align-items: end;
+}
+
+.name {
+    margin-bottom: 40px;
+}
+
+.table {
+    /* Pas de width:100% ici : forcer le tableau à occuper toute la largeur
+       du parent crée un espace excédentaire que le navigateur redistribue
+       de façon ambiguë entre les colonnes (table-layout: auto), ce qui
+       "colle" la batterie à gauche de sa cellule au lieu de la coller à
+       droite de sa carte. En laissant le tableau se dimensionner sur son
+       propre contenu (comportement d'origine), il n'y a plus d'espace
+       excédentaire à redistribuer : les colonnes restent naturellement
+       collées l'une à l'autre, et .playerEnd (align-items: end) pousse
+       l'ensemble du tableau contre le bord droit de la carte. */
+    table-layout: auto;
+}
+
+.diffCellStart,
+.diffCellEnd {
+    /* Force cette cellule à ne prendre que la largeur de son contenu
+       (la batterie) : tout espace excédentaire du tableau est ainsi
+       redistribué vers l'autre colonne (le texte), qui peut l'absorber
+       sans se déformer ni se décoller de son bord. */
+    width: 1px;
+}
+
+.diffValue {
+    margin-left: 50px;
+    white-space: nowrap;
+}
+
+.diffValueEnd {
+    margin-right: 50px;
+    white-space: nowrap;
+}
+
+.percent {
+    text-align: center;
+    margin-top: 20px;
+    width: 100%;
+}
+
+@media (max-width: 768px) {
+    .name {
+        margin-bottom: 12px;
+        font-size: 18px;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .diffValue {
+        margin-left: 10px;
+        font-size: 15px;
+    }
+
+    .diffValueEnd {
+        margin-right: 10px;
+        font-size: 15px;
+    }
+
+    .percent {
+        margin-top: 8px;
+        font-size: 13px;
+    }
+}
+
+@media (max-width: 380px) {
+    .diffValue {
+        margin-left: 4px;
+        font-size: 13px;
+    }
+
+    .diffValueEnd {
+        margin-right: 4px;
+        font-size: 13px;
+    }
+}

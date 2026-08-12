@@ -21,24 +21,111 @@ export type BattleSummary = {
   contenders_pv: number;
 };
 
-type BetListItemBase = {
+/** Issue du pari une fois la bataille réglée. */
+export type BetResult = "pending" | "won" | "lost" | "cancelled";
+
+/** État du débit escrow. Ne sort jamais vers un autre joueur que son auteur. */
+export type BetEscrowStatus = "pending" | "confirmed" | "void";
+
+type BetItemBase = {
   id: string;
-  battleId: string;
   createdAt: string;
   amount: number;
-  result: "pending" | "won" | "lost" | "cancelled";
-  status: "pending" | "confirmed" | "void";
-  battle: BattleSummary | null;
+  result: BetResult;
+  status: BetEscrowStatus;
 };
 
-type SpecializedBet = {
+/**
+ * L'appariement type ↔ details, sous forme d'union discriminée. Exporté parce
+ * que les mappers le construisent : le dériver avec un `Pick` sur un type de
+ * pari complet ne marcherait pas, `Pick` ne distribue pas sur une union et
+ * élargirait `type` et `details` chacun de leur côté.
+ */
+export type SpecializedBet = {
   [Type in BetTypeId]: {
     type: Type;
     details: BetDetailsByType[Type];
   };
 }[BetTypeId];
 
-export type UserBetListItem = BetListItemBase & SpecializedBet;
+/**
+ * Un pari, tel qu'il se lit sous sa bataille : ni `battleId` ni `battle`, qui
+ * sont portés une seule fois par le `UserBattleBets` qui le contient.
+ */
+export type UserBetItem = BetItemBase & SpecializedBet;
+
+/**
+ * Ce que le règlement d'une bataille a rapporté à l'utilisateur.
+ *
+ * Attaché à la bataille et non au pari : `settleBattle` répartit le pot par
+ * utilisateur et par type de pari, et `splitProportionally` cumule en une seule
+ * part les paris gagnants d'un même joueur — il n'existe donc pas de montant
+ * par pari à exposer, et en dériver un reviendrait à recalculer autrement ce
+ * que le settlement a figé.
+ */
+export type UserBattlePayout = {
+    /**
+     * Total crédité au titre des gains, **mise comprise** : le pot d'un type de
+     * pari inclut la mise des gagnants. Le gain net se lit en retranchant les
+     * mises du joueur sur cette bataille.
+     */
+    winnings: number;
+    /** Mises rendues au joueur faute de gagnant pour un type de pari. */
+    refunds: number;
+};
+
+/**
+ * Les paris d'un joueur sur une bataille, et ce qu'elle lui a rapporté.
+ *
+ * C'est l'unité de lecture des paris : l'écran « mes paris » en affiche une
+ * liste, une vue « mes paris sur cette bataille » en affichera un seul. La
+ * bataille est le niveau auquel le règlement produit ses montants — le pari
+ * n'en porte aucun.
+ */
+export type UserBattleBets = {
+    battleId: string;
+    /** `null` si le référee n'a pas rendu la bataille (identifiant inconnu, service muet). */
+    battle: BattleSummary | null;
+    /** Total misé par le joueur sur cette bataille, paris non confirmés compris. */
+    stake: number;
+    /** `null` tant que la bataille n'est pas réglée. */
+    payout: UserBattlePayout | null;
+    bets: UserBetItem[];
+};
+
+export type UserBetsOverview = {
+    battles: UserBattleBets[];
+};
+
+/** Le joueur derrière un pari, tel qu'il s'affiche aux autres. */
+export type BattlePlayer = {
+    id: string;
+    /** `null` si l'annuaire n'a pas rendu ce joueur (compte supprimé, service muet). */
+    pseudo: string | null;
+};
+
+/**
+ * Un pari dans la vue publique d'une bataille.
+ *
+ * Pas de `status` : l'état du débit escrow d'un joueur ne regarde que lui, et
+ * la vue ne liste que des paris confirmés de toute façon. Pas de montant de
+ * gain non plus — c'est `UserBattlePayout`, rendu au seul joueur concerné.
+ */
+export type BattleBetItem = {
+    id: string;
+    player: BattlePlayer;
+    createdAt: string;
+    amount: number;
+    result: BetResult;
+} & SpecializedBet;
+
+export type BattleBetsView = {
+    battleId: string;
+    battle: BattleSummary | null;
+    /** Total des mises confirmées, tous joueurs et tous types de paris confondus. */
+    pot: number;
+    bets: BattleBetItem[];
+};
 
 export const BetNames: Record<BetTypeId, string> = {
   betOnWinner: "Pari sur le gagnant",

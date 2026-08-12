@@ -1,0 +1,25 @@
+.shell {
+    display: flex;
+    flex-direction: row;
+    height: 100dvh;
+    overflow: hidden;
+}
+
+.content {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+@media (max-width: 768px) {
+    .shell {
+        flex-direction: column;
+    }
+
+    .content {
+        /* Laisse la place à la barre de navigation fixée en bas */
+        padding-bottom: calc(64px + env(safe-area-inset-bottom));
+    }
+}

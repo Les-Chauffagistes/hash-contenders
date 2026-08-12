@@ -193,3 +193,144 @@
   justify-content: space-between;
   min-height: 300px;
 }
+
+.versusRow {
+  display: flex;
+  flex-direction: row;
+  margin: 10px;
+  align-items: center;
+}
+
+.contenderStart {
+  flex: 1;
+  align-items: start;
+}
+
+.contenderEnd {
+  flex: 1;
+  align-items: end;
+}
+
+.roundBadgeOuter {
+  position: relative;
+  z-index: 1;
+}
+
+.roundBadgeMid {
+  padding: 20px;
+  border-radius: 55px;
+  background-color: #ff88002c;
+  margin: -50px;
+}
+
+.roundBadgeRing {
+  padding: 15px;
+  border-radius: 40px;
+  background-color: #ff88006a;
+}
+
+.roundBadgeInner {
+  display: flex;
+  background-color: var(--accent);
+  border-radius: 25px;
+  padding: 10px 10px;
+  align-items: end;
+}
+
+.roundBadgeTotal {
+  margin-bottom: 2px;
+}
+
+.historyPanel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background-color: var(--bg-alt);
+  border-top-left-radius: 20px;
+  border-top-right-radius: 20px;
+  padding-top: 20px;
+  margin: 0 10px;
+}
+
+.historyHeader {
+  display: flex;
+  justify-content: space-between;
+  padding: 5px 30px 30px;
+}
+
+.logScroll {
+  overflow: scroll;
+  flex: 1;
+}
+
+.logEmpty {
+  color: var(--text-muted);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex: 1;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 20px;
+}
+
+@media (max-width: 768px) {
+  .page {
+    padding: 8px 8px 0;
+  }
+
+  .versusRow {
+    margin: 6px 0;
+  }
+
+  .page .contender_div {
+    padding: 8px 10px;
+    min-height: 220px;
+    gap: 6px;
+  }
+
+  .roundBadgeMid {
+    padding: 10px;
+    border-radius: 40px;
+    margin: -30px;
+  }
+
+  .roundBadgeRing {
+    padding: 8px;
+    border-radius: 28px;
+  }
+
+  .roundBadgeInner {
+    border-radius: 18px;
+    padding: 6px 8px;
+  }
+
+  .roundBadgeInner h1 {
+    font-size: 20px;
+  }
+
+  .roundBadgeInner h2 {
+    font-size: 14px;
+  }
+
+  .historyPanel {
+    margin: 0;
+    border-radius: 0;
+    padding-top: 12px;
+  }
+
+  .historyHeader {
+    padding: 5px 14px 16px;
+  }
+}
+
+@media (max-width: 380px) {
+  .page .contender_div {
+    padding: 6px 6px;
+  }
+
+  .roundBadgeMid {
+    margin: -22px;
+  }
+}

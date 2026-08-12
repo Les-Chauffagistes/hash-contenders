@@ -16,19 +16,19 @@ export default function DesktopNavbar() {
                 <li className={pathname === "/" ? styles.active : ""}>
                     <Link href="/">
                         <HomeIcon />
-                        <p>Battles</p>
+                        <p>Batailles</p>
                     </Link>
                 </li>
                 <li className={pathname.includes("/bets") ? styles.active : ""}>
                     <Link href="/bets">
                         <Tickets />
-                        <p>Bets</p>
+                        <p>Paris</p>
                     </Link>
                 </li>
                 <li className={pathname.includes("/my") ? styles.active : ""}>
                     <Link href="/my">
                         <UserCircle />
-                        <p>Account</p>
+                        <p>Compte</p>
                     </Link>
                 </li>
             </ol>

@@ -152,20 +152,11 @@ export default function BatlePage() {
     }, [battleId]);
 
     const logContent = battleStatus?.hits?.length ? (
-        <div style={{ overflow: "scroll", flex: 1 }}>
+        <div className={styles.logScroll}>
             <Log hits={battleStatus.hits} />
         </div>
     ) : (
-        <div style={{
-            color: "var(--text-muted)",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            flex: 1,
-            flexDirection: "column",
-            gap: 10,
-            paddingBottom: 20
-        }}>
+        <div className={styles.logEmpty}>
             <p>Aucun coup n&apos;a encore été porté. L&apos;historique des rounds s&apos;affichera ici.</p>
             <HandFist />
         </div>
@@ -219,8 +210,8 @@ export default function BatlePage() {
             </div>
 
             <div className={styles.battleContent}>
-                <div style={{ display: "flex", flexDirection: "row", margin: 10, alignItems: "center" }}>
-                    <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "start" }} className={styles.contender_div}>
+                <div className={styles.versusRow}>
+                    <div className={`${styles.contender_div} ${styles.contenderStart}`}>
                         {battleStatus ? <PlayerLeft
                             name={battleStatus.contender_info[0].name}
                             pv={battleStatus.contender_info[0].pv}
@@ -230,25 +221,18 @@ export default function BatlePage() {
                         /> : <PlayerLeft name="Ça charge..." pv={0} pvMax={1} alignment="start" />}
                     </div>
 
-                    <div style={{ position: "relative", zIndex: 1 }}>
-                        <div style={{ padding: 20, borderRadius: 55, backgroundColor: "#ff88002c", margin: -50 }}>
-                            <div style={{ padding: 15, borderRadius: 40, backgroundColor: "#ff88006a" }}>
-                                <div style={{
-                                    display: "flex",
-                                    backgroundColor: "var(--accent)",
-                                    borderRadius: 25,
-                                    padding: "10px 10px",
-                                    alignItems: "end"
-                                }}>
+                    <div className={styles.roundBadgeOuter}>
+                        <div className={styles.roundBadgeMid}>
+                            <div className={styles.roundBadgeRing}>
+                                <div className={styles.roundBadgeInner}>
                                     <h1>{battleStatus?.current_round ?? 0}</h1>
-                                    <h2 style={{ marginBottom: 2 }}>/{battleStatus?.rounds ?? 0}</h2>
+                                    <h2 className={styles.roundBadgeTotal}>/{battleStatus?.rounds ?? 0}</h2>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "end" }}
-                         className={styles.contender_div}>
+                    <div className={`${styles.contender_div} ${styles.contenderEnd}`}>
                         {battleStatus ? <PlayerRight
                             name={battleStatus.contender_info[1].name}
                             pv={battleStatus.contender_info[1].pv}
@@ -258,18 +242,8 @@ export default function BatlePage() {
                         /> : <PlayerRight name="Ça charge..." pv={0} pvMax={1} alignment="end" />}
                     </div>
                 </div>
-                <div style={{
-                    flex: 1,
-                    display: "flex",
-                    flexDirection: "column",
-                    overflow: "hidden",
-                    backgroundColor: "var(--bg-alt)",
-                    borderTopLeftRadius: 20,
-                    borderTopRightRadius: 20,
-                    paddingTop: 20,
-                    margin: "0 10px"
-                }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", padding: "5px 30px 30px" }}>
+                <div className={styles.historyPanel}>
+                    <div className={styles.historyHeader}>
                         <p>{battleStatus?.hits ? battleStatus?.hits?.filter(hit => hit.winner === 1).length : "-"}</p>
                         <p>Historique</p>
                         <p>{battleStatus?.hits ? battleStatus?.hits?.filter(hit => hit.winner === 2).length : "-"}</p>

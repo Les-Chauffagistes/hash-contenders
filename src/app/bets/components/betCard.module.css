@@ -1,21 +1,63 @@
+/*
+ * Grille en deux colonnes : la prédiction occupe la première, le badge la
+ * seconde et reste calé en haut à droite. La méta passe sous les deux, si bien
+ * que les valeurs de prédiction s'alignent verticalement d'une carte à l'autre
+ * quel que soit le type de pari.
+ */
 .betcard {
     background: var(--bg-soft);
-    padding: 20px 24px;
+    padding: 16px 20px;
     border-radius: var(--radius);
     border: 1px solid var(--border-color);
-    transition: transform 0.2s, border-color 0.2s;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: start;
+    gap: 12px 16px;
 }
 
-.betcard:hover {
-    cursor: pointer;
-    transform: scale(1.03);
-    border-color: var(--accent);
+.prediction {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.predictionLabel {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+}
+
+.predictionValue {
+    font-size: 1.25rem;
+    font-weight: 600;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+}
+
+.meta {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+}
+
+.amount {
+    color: var(--text-main);
+    font-weight: 500;
+}
+
+.separator {
+    color: var(--border-color);
 }
 
 .badge {
+    justify-self: end;
+    white-space: nowrap;
     font-size: 0.75rem;
     font-weight: 600;
     padding: 3px 10px;

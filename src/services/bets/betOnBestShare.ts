@@ -14,26 +14,22 @@ export const betOnBestShareHandler = defineBetHandler<typeof BetOnBestShareSchem
   type: "betOnBestShare",
   schema: BetOnBestShareSchema,
 
-  /** Un jour ne peut pas miser sur une difficulté plus faible à une de ses propres paris **/
-  async checkPreconditions(data, ctx) {
-    const parsedDiff = UnitConverter.fromStringToNumber(data.diff);
-    const conflictingBet = await ctx.db.bet.findFirst({
-      where: {
-        userId: ctx.userId,
-        battleId: ctx.submission.battle_id.toString(),
-        betOnBestShare: {diff: {gte: parsedDiff}},
-      },
-      select: {id: true},
-    });
-    if (conflictingBet) throw new Error("Pari conflictuel");
+  /** Aucune condition. Un nouveau pari en remplace un autre **/
+  async checkPreconditions(_data, _ctx) {
+    return
   },
 
   async persist(tx, betId, data) {
-    await tx.betOnBestShare.create({
-      data: {
+    await tx.betOnBestShare.upsert({
+      where: {betId},
+      update: {
         diff: UnitConverter.fromStringToNumber(data.diff),
         betId,
       },
+      create: {
+        diff: UnitConverter.fromStringToNumber(data.diff),
+        betId,
+      }
     });
   },
 

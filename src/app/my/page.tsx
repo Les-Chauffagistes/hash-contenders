@@ -7,7 +7,6 @@ import { claimCoins, getBalance, getClaimable, getMe, logOut } from "../api";
 import { config } from "@/lib/config";
 import styles from "./page.module.css";
 import { Coins } from "lucide-react";
-import UnitConverter from "@/lib/UnitConverter";
 import formatNumber from "@/lib/NumberFormatter";
 
 
@@ -16,7 +15,11 @@ export default function MyPage() {
   const [claimable, setClaimable] = useState<number | null>(null);
   const [userBalance, setUserBalance] = useState<number | null>(null);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
-  const [turnstileReady, setTurnstileReady] = useState(false);
+  // `next/script` n'appelle `onLoad` qu'au tout premier chargement du script sur la page :
+  // une fois celui-ci en cache, un remount du composant (ex. retour sur cette page après
+  // avoir navigué ailleurs) ne redéclenche jamais `onLoad`. On initialise donc l'état à partir
+  // de `window.turnstile` s'il est déjà chargé, plutôt que d'attendre un `onLoad` qui ne viendra pas.
+  const [turnstileReady, setTurnstileReady] = useState(() => typeof window !== "undefined" && Boolean(window.turnstile));
   const turnstileContainerRef = useRef<HTMLDivElement | null>(null);
   const turnstileWidgetId = useRef<string | null>(null);
 
@@ -71,8 +74,8 @@ export default function MyPage() {
       {user === undefined && <p>Chargement...</p>}
       {user === null && <a href={`${config.AUTH_URL}/login?redirect=${globalThis.location.href}`}>Se connecter</a>}
       {user && <>
-          <div style={{width: "100%"}}>
-              <h1 style={{position: "absolute", left: "50%"}}>Yo {user.pseudo}</h1>
+          <div className={styles.header}>
+              <h1>Yo {user.pseudo}</h1>
               <span><Coins/>{formatNumber(userBalance ?? 0)}</span>
           </div>
           <div ref={turnstileContainerRef}/>
