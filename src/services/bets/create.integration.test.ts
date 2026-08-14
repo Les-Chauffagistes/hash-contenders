@@ -28,7 +28,7 @@ import {transferCoins, getUserCoins} from "@/clients/wallet";
 import {decodeAccessToken} from "@/server/auth";
 import {betOnWinnerHandler} from "@/services/bets/betOnWinner";
 import {submitBet} from "@/services/bets/create";
-import {EscrowDebitFailedError} from "@/services/bets/errors";
+import {BettingClosedError, EscrowDebitFailedError, InvalidBetDataError} from "@/services/bets/errors";
 
 const execFileAsync = promisify(execFile);
 
@@ -40,7 +40,7 @@ const battle: BattleStatus = {
   start_height: 1,
   is_finished: false,
   hits: [],
-  current_round: 1,
+  current_round: 0,
   contender_info: [],
 };
 
@@ -138,13 +138,14 @@ describe("submitBet avec PostgreSQL", () => {
   });
 
   it("persiste un pari sur la meilleure share avec un bigint", async () => {
+    vi.mocked(getBattleStatus).mockResolvedValue({...battle, current_round: 0});
     const idempotencyKey = "ef7d9363-50ce-428d-b893-b257b94fcac7";
 
     await submitBet(
       db,
       {
         battle_id: 123,
-        amount: 75,
+        amount: 50,
         idempotency_key: idempotencyKey,
         bet: {
           type: "betOnBestShare",
@@ -169,6 +170,139 @@ describe("submitBet avec PostgreSQL", () => {
         diff: BigInt(2_500_000_000),
       },
     });
+  });
+
+  it("refuse un pari betOnBestShare une fois la bataille démarrée", async () => {
+    vi.mocked(getBattleStatus).mockResolvedValue({...battle, current_round: 1});
+
+    await expect(
+      submitBet(
+        db,
+        {
+          battle_id: 123,
+          amount: 50,
+          idempotency_key: "3d3f9b8f-6f2f-4b7b-9a5b-6a2b6f6f9b8a",
+          bet: {type: "betOnBestShare", diff: "2.5G"},
+        },
+        "access-token",
+      ),
+    ).rejects.toBeInstanceOf(BettingClosedError);
+
+    expect(await db.bet.count()).toBe(0);
+  });
+
+  it("refuse un pari betOnWinner une fois la bataille démarrée", async () => {
+    vi.mocked(getBattleStatus).mockResolvedValue({...battle, current_round: 1});
+
+    await expect(
+      submitBet(
+        db,
+        {
+          battle_id: 123,
+          amount: 50,
+          idempotency_key: "4e2f9b8f-6f2f-4b7b-9a5b-6a2b6f6f9b8c",
+          bet: {type: "betOnWinner", winner_index: 1},
+        },
+        "access-token",
+      ),
+    ).rejects.toBeInstanceOf(BettingClosedError);
+
+    expect(await db.bet.count()).toBe(0);
+  });
+
+  it("refuse un pari betOnBestShare dont le montant n'est pas le prix fixe du ticket", async () => {
+    vi.mocked(getBattleStatus).mockResolvedValue({...battle, current_round: 0});
+
+    await expect(
+      submitBet(
+        db,
+        {
+          battle_id: 123,
+          amount: 75,
+          idempotency_key: "7a2f9b8f-6f2f-4b7b-9a5b-6a2b6f6f9b8b",
+          bet: {type: "betOnBestShare", diff: "2.5G"},
+        },
+        "access-token",
+      ),
+    ).rejects.toBeInstanceOf(InvalidBetDataError);
+
+    expect(await db.bet.count()).toBe(0);
+  });
+
+  it("édite le ticket existant au lieu d'en créer un nouveau, sans nouveau débit", async () => {
+    vi.mocked(getBattleStatus).mockResolvedValue({...battle, current_round: 0});
+
+    await submitBet(
+      db,
+      {
+        battle_id: 123,
+        amount: 50,
+        idempotency_key: "5b6f6f9b-8a3d-4f9b-8f6f-2f4b7b9a5b6a",
+        bet: {type: "betOnBestShare", diff: "2.5G"},
+      },
+      "access-token",
+    );
+    await submitBet(
+      db,
+      {
+        battle_id: 123,
+        amount: 50,
+        idempotency_key: "9b8a3d4f-9b8f-6f2f-4b7b-9a5b6a2b6f6f",
+        bet: {type: "betOnBestShare", diff: "3G"},
+      },
+      "access-token",
+    );
+
+    expect(await db.bet.count({where: {battleId: "123", userId: 42}})).toBe(1);
+    expect(await db.betOnBestShare.count()).toBe(1);
+    const storedBet = await db.bet.findFirst({
+      where: {battleId: "123", userId: 42},
+      include: {betOnBestShare: true},
+    });
+    expect(storedBet).toMatchObject({betOnBestShare: {diff: BigInt(3_000_000_000)}});
+    expect(transferCoins).toHaveBeenCalledOnce();
+  });
+
+  it("ne crée qu'un seul ticket lors d'une édition concurrente", async () => {
+    vi.mocked(getBattleStatus).mockResolvedValue({...battle, current_round: 0});
+
+    await submitBet(
+      db,
+      {
+        battle_id: 123,
+        amount: 50,
+        idempotency_key: "2f4b7b9a-5b6a-2b6f-6f9b-8a3d4f9b8f6f",
+        bet: {type: "betOnBestShare", diff: "2.5G"},
+      },
+      "access-token",
+    );
+
+    await Promise.all([
+      submitBet(
+        db,
+        {
+          battle_id: 123,
+          amount: 50,
+          idempotency_key: "6a2b6f6f-9b8a-3d4f-9b8f-6f2f4b7b9a5b",
+          bet: {type: "betOnBestShare", diff: "3G"},
+        },
+        "access-token",
+      ),
+      submitBet(
+        db,
+        {
+          battle_id: 123,
+          amount: 50,
+          idempotency_key: "8f6f2f4b-7b9a-5b6a-2b6f-6f9b8a3d4f9b",
+          bet: {type: "betOnBestShare", diff: "4G"},
+        },
+        "access-token",
+      ),
+    ]);
+
+    expect(await db.bet.count({where: {battleId: "123", userId: 42}})).toBe(1);
+    expect(await db.betOnBestShare.count()).toBe(1);
+    expect(transferCoins).toHaveBeenCalledOnce();
   });
 
   it("conserve le pari en void et l'outbox en failed lorsque le débit est refusé définitivement", async () => {

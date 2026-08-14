@@ -1,5 +1,5 @@
 import {components} from "@les-chauffagistes/authentication-types"
-import type {UserBetsOverview} from "@/contracts/bets";
+import type {BattleBetsView, UserBetsOverview} from "@/contracts/bets";
 import {UnauthorizedError} from "@/lib/errors";
 import {config} from "@/lib/config";
 
@@ -52,6 +52,14 @@ export async function getUserBetsOverview(): Promise<UserBetsOverview> {
     if (res.status === 401) throw new UnauthorizedError();
     if (!res.ok) {
         throw new Error(`Unable to fetch user bets: ${res.status}`);
+    }
+    return res.json();
+}
+
+export async function getBattleBetsView(battleId: string, signal?: AbortSignal): Promise<BattleBetsView> {
+    const res = await fetch(`${config.BASE_URL}/api/battles/${encodeURIComponent(battleId)}/bets`, {signal});
+    if (!res.ok) {
+        throw new Error(`Unable to fetch battle bets: ${res.status}`);
     }
     return res.json();
 }

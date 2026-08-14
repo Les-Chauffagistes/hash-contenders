@@ -119,7 +119,8 @@ describe("pipeline complet : pari -> escrow -> settlement -> payout", () => {
     vi.mocked(transferCoins).mockImplementation(async (params) => {
       wallet.transfer(params.fromUserId, params.toUserId, params.amount);
     });
-    vi.mocked(getBattleStatus).mockResolvedValue(battleStatus({is_finished: false}));
+    // Bataille pas encore démarrée : les paris sont acceptés.
+    vi.mocked(getBattleStatus).mockResolvedValue(battleStatus({is_finished: false, current_round: 0}));
 
     // Trois paris confirmés : user 1 et 3 sur le vainqueur (1), user 2 sur le
     // perdant (2). Chaque pari passe par le vrai submitBet (debit escrow
@@ -165,5 +166,70 @@ describe("pipeline complet : pari -> escrow -> settlement -> payout", () => {
     // créé ni détruit par le passage en escrow).
     const total = [1, 2, 3, escrow].reduce((sum, id) => sum + wallet.get(id), 0);
     expect(total).toBe(1_000 + 1_000 + 1_000);
+  });
+
+  it("brûle 20% du pot betOnBestShare quand aucune diff n'est atteinte : le total de coins baisse d'autant", async () => {
+    const bestShareBattleId = 998;
+    const wallet = new FakeWallet();
+    wallet.set(4, 1_000);
+    wallet.set(5, 1_000);
+
+    vi.mocked(decodeAccessToken).mockImplementation(async (token: string) => ({
+      user_id: token,
+      pseudo: `user-${token}`,
+    }));
+    vi.mocked(getUserCoins).mockImplementation(async (access_token: string) => ({
+      balance: wallet.get(Number(access_token)),
+    }));
+    vi.mocked(transferCoins).mockImplementation(async (params) => {
+      wallet.transfer(params.fromUserId, params.toUserId, params.amount);
+    });
+    // Bataille pas encore démarrée : les tickets à prix fixe sont acceptés.
+    vi.mocked(getBattleStatus).mockResolvedValue(
+      battleStatus({battle_id: bestShareBattleId, is_finished: false, current_round: 0}),
+    );
+
+    await submitBet(
+      db,
+      {battle_id: bestShareBattleId, amount: 50, idempotency_key: crypto.randomUUID(), bet: {type: "betOnBestShare", diff: "600"}},
+      "4",
+    );
+    await submitBet(
+      db,
+      {battle_id: bestShareBattleId, amount: 50, idempotency_key: crypto.randomUUID(), bet: {type: "betOnBestShare", diff: "700"}},
+      "5",
+    );
+
+    const escrow = escrowUserId(bestShareBattleId);
+    expect(wallet.get(escrow)).toBe(100);
+
+    // La bataille se termine sans qu'aucune des deux diffs visées (600, 700)
+    // n'ait été atteinte (meilleure diff réellement trouvée : 500).
+    vi.mocked(getBattleStatus).mockResolvedValue(
+      battleStatus({
+        battle_id: bestShareBattleId,
+        is_finished: true,
+        hits: [
+          {date: new Date(), battle_id: bestShareBattleId, contender_1_best_diff: 500, contender_2_best_diff: 100, block_height: 1, winner: null},
+        ],
+      }),
+    );
+    await settleBattle(db, bestShareBattleId);
+    await dispatchOutboxBatch(db);
+
+    // Chaque ticket est remboursé à 80% (40), 20% (10) reste en escrow, brûlé.
+    expect(wallet.get(4)).toBe(1_000 - 50 + 40);
+    expect(wallet.get(5)).toBe(1_000 - 50 + 40);
+    expect(wallet.get(escrow)).toBe(20);
+
+    // "Brûlé" ne détruit aucun coin côté wallet-service : le total du système
+    // (joueurs + escrow) reste invariant, ces 20 coins restent simplement
+    // bloqués pour toujours sur le pseudo-compte escrow, sans destinataire.
+    // C'est du point de vue des joueurs que la perte est définitive : leur
+    // solde cumulé baisse de 20 par rapport à leur mise initiale.
+    const playersTotal = [4, 5].reduce((sum, id) => sum + wallet.get(id), 0);
+    expect(playersTotal).toBe(1_000 + 1_000 - 20);
+    const systemTotal = [4, 5, escrow].reduce((sum, id) => sum + wallet.get(id), 0);
+    expect(systemTotal).toBe(1_000 + 1_000);
   });
 });

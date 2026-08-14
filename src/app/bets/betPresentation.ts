@@ -12,7 +12,9 @@ import UnitConverter from "@/lib/UnitConverter";
 import type {
     BattleSummary,
     BetDetailsByType,
+    BetResult,
     BetTypeId,
+    SpecializedBet,
     UserBattleBets,
     UserBetItem,
 } from "@/contracts/bets";
@@ -50,13 +52,13 @@ const PREDICTORS: BetPredictors = {
 };
 
 /** La bataille vient du `UserBattleBets` qui porte le pari — lui ne l'a plus. */
-export function describePrediction(bet: UserBetItem, battle: BattleSummary | null): BetPrediction {
+export function describePrediction(bet: SpecializedBet, battle: BattleSummary | null): BetPrediction {
     // Indexer le Record par le discriminant donne une union de fonctions, dont
     // TS ne sait plus qu'elle est appariée au `details` du *même* membre de
     // l'union. Le cast rétablit cet appariement, garanti par la construction de
     // `BetPredictors` au-dessus des mêmes clés.
     const describe = PREDICTORS[bet.type] as (
-        details: UserBetItem["details"],
+        details: SpecializedBet["details"],
         battle: BattleSummary | null,
     ) => BetPrediction;
 
@@ -70,17 +72,8 @@ export type BetState = {
     tone: BetStateTone;
 };
 
-/**
- * `status` (le débit escrow a-t-il abouti) et `result` (l'issue de la bataille)
- * sont deux axes distincts, et le badge n'en montre qu'un. L'ordre ci-dessous
- * fixe la priorité : tant que la mise n'est pas prélevée ou que le pari est
- * annulé, l'issue n'a pas de sens à être affichée.
- */
-export function describeState(bet: UserBetItem): BetState {
-    if (bet.status === "pending") return {label: "À confirmer", tone: "pending"};
-    if (bet.status === "void") return {label: "Annulé", tone: "void"};
-
-    switch (bet.result) {
+export function describeResult(result: BetResult): BetState {
+    switch (result) {
         case "won":
             return {label: "Gagné", tone: "won"};
         case "lost":
@@ -90,6 +83,18 @@ export function describeState(bet: UserBetItem): BetState {
         case "pending":
             return {label: "En jeu", tone: "confirmed"};
     }
+}
+
+/**
+ * `status` (le débit escrow a-t-il abouti) et `result` (l'issue de la bataille)
+ * sont deux axes distincts, et le badge n'en montre qu'un. L'ordre ci-dessous
+ * fixe la priorité : tant que la mise n'est pas prélevée ou que le pari est
+ * annulé, l'issue n'a pas de sens à être affichée.
+ */
+export function describeState(bet: UserBetItem): BetState {
+    if (bet.status === "pending") return {label: "À confirmer", tone: "pending"};
+    if (bet.status === "void") return {label: "Annulé", tone: "void"};
+    return describeResult(bet.result);
 }
 
 /** Un pari confirmé dont l'issue n'est pas encore connue. */

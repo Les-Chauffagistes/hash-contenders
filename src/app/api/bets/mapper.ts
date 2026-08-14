@@ -156,18 +156,27 @@ export function toUserBetsOverview(
  * (l'escrow d'un joueur ne regarde que lui), ni montant de gain. À noter tout
  * de même : publier toutes les mises et toutes les issues rend la répartition
  * recalculable, `splitProportionally` étant déterministe.
+ *
+ * Tant que `betOnBestShareRevealed` est faux (bataille pas encore démarrée),
+ * les paris betOnBestShare sont exclus de `bets` ET de `pot` — betOnWinner
+ * reste visible normalement, la règle de confidentialité ne concernant que
+ * les positions betOnBestShare.
  */
 export function toBattleBetsView(
     battleId: string,
     battle: Battle | null,
     bets: BattleBetRecord[],
     pseudosByUserId: Map<string, string>,
+    betOnBestShareRevealed: boolean,
 ): BattleBetsView {
+    const visibleBets = betOnBestShareRevealed ? bets : bets.filter((bet) => bet.betOnBestShare === null);
+
     return {
         battleId,
         battle: battle ? toBattleSummary(battle) : null,
-        pot: bets.reduce((total, bet) => total + bet.amount, 0),
-        bets: bets.map((bet) =>
+        pot: visibleBets.reduce((total, bet) => total + bet.amount, 0),
+        betOnBestShareRevealed,
+        bets: visibleBets.map((bet) =>
             withSpecialization(
                 {
                     id: bet.id,

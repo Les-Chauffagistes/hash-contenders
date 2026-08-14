@@ -2,6 +2,7 @@ import {z} from "zod";
 import {Prisma, PrismaClient} from "@/generated/prisma/client";
 import {BattleStatus} from "../../../models/BattleStatus";
 import type {BetTypeId} from "@/contracts/bets";
+import {BettingClosedError} from "@/services/bets/errors";
 
 
 export const CURRENCY = process.env.BETS_CURRENCY!;
@@ -91,9 +92,37 @@ export interface BetHandler<T extends z.ZodType = z.ZodType, TPersisted = unknow
    * chaque gagnant (userId -> montant). L'appelant doit redistribuer
    * exactement le pot du type (somme des `amount` reçus) — voir
    * `splitProportionally`. Une Map vide signifie "aucun gagnant" :
-   * `settleBattle` rembourse alors chaque parieur de ce type sa propre mise.
+   * `settleBattle` rembourse alors chaque parieur de ce type sa propre mise
+   * (ou une fraction, voir `refundRate`).
    */
   computePayouts(bets: ConfirmedBet<TPersisted>[], battleResult: BattleResult): Map<bigint, number>;
+
+  /**
+   * Point d'extension "un ticket par (user, battle)" : retrouve le pari
+   * existant de ce type pour cet utilisateur sur cette bataille, s'il existe.
+   * Quand défini, `submitBet` édite ce pari en place (nouvelle donnée
+   * spécialisée, aucun nouveau `Bet`, aucun nouveau débit escrow) au lieu
+   * d'en créer un nouveau. Absent : chaque soumission crée toujours un
+   * nouveau `Bet`, comportement historique inchangé.
+   */
+  findEditableBet?(tx: TransactionClient, userId: number, battleId: string): Promise<{id: string} | null>;
+
+  /**
+   * Fraction de la mise remboursée par `settleBattle` quand `computePayouts`
+   * ne rend aucun gagnant (Map vide). Absent : 1 (remboursement intégral,
+   * comportement historique inchangé).
+   */
+  readonly refundRate?: number;
+}
+
+/**
+ * Rejette une création ou édition de pari une fois la bataille démarrée.
+ * `current_round > 0` est le même seuil que celui déjà utilisé côté
+ * frontend (`BattleCard.tsx`) pour savoir si une bataille a démarré.
+ * Partagé par les handlers qui ferment leurs paris au démarrage.
+ */
+export function assertBettingOpen(battle: BattleStatus): void {
+  if (battle.current_round > 0) throw new BettingClosedError();
 }
 
 /** Préserve l'inférence du schéma dans les signatures du handler. */

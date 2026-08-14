@@ -22,6 +22,7 @@ import {decodeAccessToken} from "@/server/auth";
 import {
   BattleFinishedError,
   BetCreationError,
+  BettingClosedError,
   EscrowDebitFailedError,
   InsufficientBalanceError,
   InvalidBetDataError,
@@ -37,39 +38,43 @@ const battle: BattleStatus = {
   start_height: 1,
   is_finished: false,
   hits: [],
-  current_round: 1,
+  current_round: 0,
   contender_info: [],
 };
 
 type TransactionMock = {
   bet: {
     create: ReturnType<typeof vi.fn>;
+    findFirst: ReturnType<typeof vi.fn>;
   };
   betOnWinner: {
     create: ReturnType<typeof vi.fn>;
   };
   betOnBestShare: {
-    create: ReturnType<typeof vi.fn>;
+    upsert: ReturnType<typeof vi.fn>;
   };
   payoutOutbox: {
     create: ReturnType<typeof vi.fn>;
   };
+  $executeRaw: ReturnType<typeof vi.fn>;
 };
 
 function createDb() {
   const tx: TransactionMock = {
     bet: {
       create: vi.fn().mockResolvedValue({id: "bet-id"}),
+      findFirst: vi.fn().mockResolvedValue(null),
     },
     betOnWinner: {
       create: vi.fn().mockResolvedValue(undefined),
     },
     betOnBestShare: {
-      create: vi.fn().mockResolvedValue(undefined),
+      upsert: vi.fn().mockResolvedValue(undefined),
     },
     payoutOutbox: {
       create: vi.fn().mockResolvedValue(undefined),
     },
+    $executeRaw: vi.fn().mockResolvedValue(undefined),
   };
 
   const db = {
@@ -218,6 +223,26 @@ describe("submitBet", () => {
     expect(db.$transaction).not.toHaveBeenCalled();
   });
 
+  it("refuse un pari betOnWinner une fois la bataille démarrée", async () => {
+    const {db, prisma} = createDb();
+    vi.mocked(getBattleStatus).mockResolvedValueOnce({...battle, current_round: 1});
+
+    await expect(
+      submitBet(
+        prisma,
+        {
+          battle_id: 123,
+          amount: 50,
+          idempotency_key: "3f2b9a8f-6a19-4e39-9b7b-5f0f6f6b6f9d",
+          bet: {type: "betOnWinner", winner_index: 1},
+        },
+        "access-token",
+      ),
+    ).rejects.toBeInstanceOf(BettingClosedError);
+
+    expect(db.$transaction).not.toHaveBeenCalled();
+  });
+
   it("refuse un pari en conflit avec un pari existant", async () => {
     const {db, prisma} = createDb();
     db.bet.findFirst.mockResolvedValue({id: "conflicting-bet"});
@@ -294,7 +319,7 @@ describe("submitBet", () => {
         betId: "bet-id",
       },
     });
-    expect(tx.betOnBestShare.create).not.toHaveBeenCalled();
+    expect(tx.betOnBestShare.upsert).not.toHaveBeenCalled();
     expect(tx.payoutOutbox.create).toHaveBeenCalledWith({
       data: {
         battleId: "123",
@@ -324,9 +349,10 @@ describe("submitBet", () => {
 
   it("insère le pari sur la meilleure share avec la difficulté convertie", async () => {
     const {db, prisma, tx} = createDb();
+    vi.mocked(getBattleStatus).mockResolvedValueOnce({...battle, current_round: 0});
     const submission = {
       battle_id: 123,
-      amount: 75,
+      amount: 50,
       idempotency_key: "b459fd4f-1d68-44bf-a5ce-f4225789e4c4",
       bet: {
         type: "betOnBestShare",
@@ -339,22 +365,90 @@ describe("submitBet", () => {
     expect(tx.bet.create).toHaveBeenCalledWith({
       data: {
         battleId: "123",
-        amount: 75,
+        amount: 50,
         userId: 42,
         idempotencyKey: submission.idempotency_key,
       },
     });
-    expect(tx.betOnBestShare.create).toHaveBeenCalledWith({
-      data: {
-        diff: 2_500,
-        betId: "bet-id",
-      },
+    expect(tx.betOnBestShare.upsert).toHaveBeenCalledWith({
+      where: {betId: "bet-id"},
+      update: {diff: 2_500, betId: "bet-id"},
+      create: {diff: 2_500, betId: "bet-id"},
     });
     expect(tx.betOnWinner.create).not.toHaveBeenCalled();
     expect(db.bet.update).toHaveBeenCalledWith({
       where: {id: "bet-id"},
       data: {status: "confirmed"},
     });
+  });
+
+  it("refuse un pari betOnBestShare dont le montant n'est pas le prix fixe du ticket", async () => {
+    const {db, prisma} = createDb();
+    vi.mocked(getBattleStatus).mockResolvedValueOnce({...battle, current_round: 0});
+
+    await expect(
+      submitBet(
+        prisma,
+        {
+          battle_id: 123,
+          amount: 75,
+          idempotency_key: "24d95a37-9d3c-4a19-9d92-6f3c9a1d78a2",
+          bet: {type: "betOnBestShare", diff: "2.5K"},
+        },
+        "access-token",
+      ),
+    ).rejects.toBeInstanceOf(InvalidBetDataError);
+
+    expect(db.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("refuse un pari betOnBestShare une fois la bataille démarrée", async () => {
+    const {db, prisma} = createDb();
+    vi.mocked(getBattleStatus).mockResolvedValueOnce({...battle, current_round: 1});
+
+    await expect(
+      submitBet(
+        prisma,
+        {
+          battle_id: 123,
+          amount: 50,
+          idempotency_key: "a2f9a8f2-6a19-4e39-9b7b-5f0f6f6b6f9d",
+          bet: {type: "betOnBestShare", diff: "2.5K"},
+        },
+        "access-token",
+      ),
+    ).rejects.toBeInstanceOf(BettingClosedError);
+
+    expect(db.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("édite le pari betOnBestShare existant au lieu d'en créer un nouveau", async () => {
+    const {db, prisma, tx} = createDb();
+    vi.mocked(getBattleStatus).mockResolvedValueOnce({...battle, current_round: 0});
+    db.bet.findFirst.mockResolvedValue({id: "existing-bet-id"});
+    tx.bet.findFirst.mockResolvedValue({id: "existing-bet-id"});
+
+    await submitBet(
+      prisma,
+      {
+        battle_id: 123,
+        amount: 50,
+        idempotency_key: "d2b5e6a7-2f2f-4b8a-9d2c-6a2c1e9a9f0b",
+        bet: {type: "betOnBestShare", diff: "3K"},
+      },
+      "access-token",
+    );
+
+    expect(getUserCoins).not.toHaveBeenCalled();
+    expect(tx.bet.create).not.toHaveBeenCalled();
+    expect(tx.payoutOutbox.create).not.toHaveBeenCalled();
+    expect(tx.betOnBestShare.upsert).toHaveBeenCalledWith({
+      where: {betId: "existing-bet-id"},
+      update: {diff: 3_000, betId: "existing-bet-id"},
+      create: {diff: 3_000, betId: "existing-bet-id"},
+    });
+    expect(transferCoins).not.toHaveBeenCalled();
+    expect(db.bet.update).not.toHaveBeenCalled();
   });
 
   it("n'effectue ni débit ni mise à jour si l'insertion spécialisée échoue", async () => {

@@ -2,6 +2,9 @@ export const BET_TYPE_IDS = ["betOnWinner", "betOnBestShare"] as const;
 
 export type BetTypeId = (typeof BET_TYPE_IDS)[number];
 
+/** Prix fixe du ticket betOnBestShare : la mise n'est plus libre pour ce type. */
+export const BEST_SHARE_TICKET_PRICE = 50;
+
 export type BetDetailsByType = {
   betOnWinner: {
     winnerIndex: number;
@@ -122,8 +125,17 @@ export type BattleBetItem = {
 export type BattleBetsView = {
     battleId: string;
     battle: BattleSummary | null;
-    /** Total des mises confirmées, tous joueurs et tous types de paris confondus. */
+    /**
+     * Mises confirmées visibles : betOnWinner toujours inclus, betOnBestShare
+     * inclus seulement si `betOnBestShareRevealed`.
+     */
     pot: number;
+    /**
+     * `false` tant que la bataille n'a pas démarré : les paris betOnBestShare
+     * sont alors absents de `bets` et exclus de `pot` ; betOnWinner reste
+     * visible normalement.
+     */
+    betOnBestShareRevealed: boolean;
     bets: BattleBetItem[];
 };
 

@@ -4,8 +4,9 @@ import { useState } from "react";
 import { BetTypeFormProps } from "./types";
 import styles from "../page.module.css";
 
-export default function BetOnWinnerForm({ contenders, errors }: Readonly<BetTypeFormProps>) {
-    const [selectedContenderIndex, setSelectedContenderIndex] = useState<number | null>(null);
+export default function BetOnWinnerForm({ contenders, errors, defaultValues, disabled }: Readonly<BetTypeFormProps>) {
+    const defaultIndex = defaultValues?.winner_index ? Number(defaultValues.winner_index) : null;
+    const [selectedContenderIndex, setSelectedContenderIndex] = useState<number | null>(defaultIndex);
 
     return (
         <>
@@ -17,6 +18,8 @@ export default function BetOnWinnerForm({ contenders, errors }: Readonly<BetType
                                 type="radio"
                                 name="winner_index"
                                 value={index + 1}
+                                defaultChecked={index + 1 === defaultIndex}
+                                disabled={disabled}
                                 onChange={e => setSelectedContenderIndex(Number(e.target.value))}
                             />
                             <span>{contender}</span>

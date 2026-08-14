@@ -10,7 +10,7 @@ import Log from "./components/Log";
 import { WebSocketEvent } from "../../../../models/WebSocketEvents";
 import styles from "./page.module.css"
 import { Round } from "../../../../models/Hit";
-import { EllipsisVertical, HandFist, Trash2 } from "lucide-react";
+import { Coins, EllipsisVertical, HandFist, ListFilter, Trash2 } from "lucide-react";
 import {config} from "@/lib/config";
 import { components } from "@les-chauffagistes/authentication-types";
 import { deleteBattleAction } from "@/lib/actions/deleteBattle";
@@ -38,6 +38,7 @@ export default function BatlePage() {
     const isOwner = battleStatus !== null
         && user !== null
         && battleStatus.owner_user_id === Number(user.user_id);
+    const canBet = battleStatus !== null && !battleStatus.is_finished;
 
     async function handleDeleteBattle() {
         const parsedBattleId = Number(battleId);
@@ -167,31 +168,57 @@ export default function BatlePage() {
             <div className={styles.battleHeader}>
                 <span className={styles.battleLabel}>Bataille #{battleId}</span>
 
-                {isOwner && (
-                    <div className={styles.actions}>
-                        <button
-                            type="button"
-                            className={styles.menuButton}
-                            aria-label="Actions de la bataille"
-                            aria-haspopup="menu"
-                            aria-expanded={isMenuOpen}
-                            onClick={() => setIsMenuOpen(open => !open)}
-                        >
-                            <EllipsisVertical aria-hidden="true" size={20} />
-                        </button>
+                <div className={styles.actions}>
+                    <button
+                        type="button"
+                        className={styles.menuButton}
+                        aria-label="Actions de la bataille"
+                        aria-haspopup="menu"
+                        aria-expanded={isMenuOpen}
+                        onClick={() => setIsMenuOpen(open => !open)}
+                    >
+                        <EllipsisVertical aria-hidden="true" size={20} />
+                    </button>
 
-                        {isMenuOpen && (
-                            <>
+                    {isMenuOpen && (
+                        <>
+                            <button
+                                type="button"
+                                className={styles.menuDismiss}
+                                aria-label="Fermer le menu"
+                                onClick={() => setIsMenuOpen(false)}
+                            />
+                            <div className={styles.actionMenu} role="menu">
                                 <button
                                     type="button"
-                                    className={styles.menuDismiss}
-                                    aria-label="Fermer le menu"
-                                    onClick={() => setIsMenuOpen(false)}
-                                />
-                                <div className={styles.actionMenu} role="menu">
+                                    className={`${styles.menuItem} ${styles.betsMenuItem}`}
+                                    role="menuitem"
+                                    onClick={() => {
+                                        setIsMenuOpen(false);
+                                        router.push(`/battle/${battleId}/bets`);
+                                    }}
+                                >
+                                    <ListFilter aria-hidden="true" size={17} />
+                                    Voir les paris
+                                </button>
+                                {canBet && (
                                     <button
                                         type="button"
-                                        className={styles.deleteMenuItem}
+                                        className={`${styles.menuItem} ${styles.betMenuItem}`}
+                                        role="menuitem"
+                                        onClick={() => {
+                                            setIsMenuOpen(false);
+                                            router.push(`/bets/create?battle_id=${battleId}`);
+                                        }}
+                                    >
+                                        <Coins aria-hidden="true" size={17} />
+                                        Parier
+                                    </button>
+                                )}
+                                {isOwner && (
+                                    <button
+                                        type="button"
+                                        className={`${styles.menuItem} ${styles.deleteMenuItem}`}
                                         role="menuitem"
                                         onClick={() => {
                                             setIsMenuOpen(false);
@@ -202,11 +229,11 @@ export default function BatlePage() {
                                         <Trash2 aria-hidden="true" size={17} />
                                         Supprimer la bataille
                                     </button>
-                                </div>
-                            </>
-                        )}
-                    </div>
-                )}
+                                )}
+                            </div>
+                        </>
+                    )}
+                </div>
             </div>
 
             <div className={styles.battleContent}>

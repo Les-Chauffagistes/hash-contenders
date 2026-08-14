@@ -4,6 +4,7 @@ import {
     BattleFinishedError,
     BattleNotFoundError,
     BetCreationError,
+    BettingClosedError,
     EscrowDebitFailedError,
     InsufficientBalanceError,
     InvalidBetDataError,
@@ -28,6 +29,7 @@ export async function POST(request: Request) {
     } catch (e) {
         if (e instanceof BattleNotFoundError) return NextResponse.json({error: "Bataille introuvable"}, {status: 404});
         if (e instanceof BattleFinishedError) return NextResponse.json({error: "La bataille est déjà terminée"}, {status: 409});
+        if (e instanceof BettingClosedError) return NextResponse.json({error: "Les paris sont clos, la bataille a démarré"}, {status: 409});
         if (e instanceof InsufficientBalanceError) return NextResponse.json({error: "Solde insuffisant pour placer ce pari"}, {status: 422});
         if (e instanceof BetCreationError) return NextResponse.json({error: "Impossible de créer le pari, veuillez réessayer"}, {status: 500});
         if (e instanceof EscrowDebitFailedError) return NextResponse.json({error: "Impossible de débiter les coins, pari annulé"}, {status: 502});

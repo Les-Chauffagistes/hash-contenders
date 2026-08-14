@@ -60,16 +60,44 @@ export async function submitBet(db: PrismaClient, data: z.infer<typeof CreateBet
 
     await handler.checkPreconditions(parsed.data, ctx);
 
-    const {balance} = await getUserCoins(access_token, CURRENCY);
-    if (balance < data.amount) throw new InsufficientBalanceError();
-
     const battleId = data.battle_id.toString();
+
+    // Un handler qui déclare `findEditableBet` porte un pari déjà payé
+    // (ticket à prix fixe, un seul par (user, battle)) : le retrouver ici
+    // évite un contrôle de solde inutile — l'édition ne débite rien.
+    const editableBet = handler.findEditableBet
+        ? await handler.findEditableBet(db, ctx.userId, battleId)
+        : null;
+
+    if (!editableBet) {
+        const {balance} = await getUserCoins(access_token, CURRENCY);
+        if (balance < data.amount) throw new InsufficientBalanceError();
+    }
+
     let storedBetId: string;
+    let isEdit = false;
 
     // Crée un pari 'pending' : ligne principale, ligne spécialisée, et la
-    // ligne outbox du débit escrow, ensemble.
+    // ligne outbox du débit escrow, ensemble. Ou, si un pari éditable existe
+    // déjà pour ce (user, battle, type), met simplement à jour sa donnée
+    // spécialisée : pas de nouveau `Bet`, pas de nouveau débit.
     try {
         await db.$transaction(async (tx) => {
+            if (handler.findEditableBet) {
+                // Sérialise les soumissions concurrentes du même utilisateur pour
+                // ce (type, battle) : ferme la fenêtre de course entre la lecture
+                // ci-dessus (hors transaction) et cette re-lecture qui fait foi.
+                await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${handler.type}:${battleId}:${ctx.userId}`}))`;
+
+                const existing = await handler.findEditableBet(tx, ctx.userId, battleId);
+                if (existing) {
+                    isEdit = true;
+                    storedBetId = existing.id;
+                    await handler.persist(tx, existing.id, parsed.data);
+                    return;
+                }
+            }
+
             const storedBet = await tx.bet.create({
                 data: {
                     battleId,
@@ -101,6 +129,10 @@ export async function submitBet(db: PrismaClient, data: z.infer<typeof CreateBet
         if (e instanceof BetError) throw e;
         throw new BetCreationError();
     }
+
+    // Édition d'un ticket déjà payé : la donnée spécialisée est à jour, rien
+    // d'autre à faire — pas de débit, le pari garde son statut actuel.
+    if (isEdit) return;
 
     // Après COMMIT, jamais avant : aucun appel réseau n'a eu lieu pendant la
     // transaction. L'appel synchrone donne un retour immédiat à l'utilisateur ;

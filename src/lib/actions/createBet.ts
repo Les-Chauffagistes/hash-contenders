@@ -11,6 +11,7 @@ import {
     BattleFinishedError,
     BattleNotFoundError,
     BetCreationError,
+    BettingClosedError,
     EscrowDebitFailedError,
     InsufficientBalanceError,
     InvalidBetDataError,
@@ -82,6 +83,7 @@ export async function createBetAction(
         if (e instanceof UnauthorizedError) return { errors: { _form: "Session expirée" }, authExpired: true };
         if (e instanceof BattleNotFoundError) return { errors: { _form: "Bataille introuvable" } };
         if (e instanceof BattleFinishedError) return { errors: { _form: "La bataille est déjà terminée" } };
+        if (e instanceof BettingClosedError) return { errors: { _form: "Les paris sont clos, la bataille a démarré" } };
         if (e instanceof InsufficientBalanceError) return { errors: { _form: "Solde insuffisant pour placer ce pari" } };
         if (e instanceof BetCreationError) return { errors: { _form: "Impossible de créer le pari, veuillez réessayer" } };
         if (e instanceof EscrowDebitFailedError) return { errors: { _form: "Impossible de débiter les coins, pari annulé" } };

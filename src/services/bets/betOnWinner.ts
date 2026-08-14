@@ -1,5 +1,5 @@
 import {z} from "zod";
-import {BattleResult, BetContext, ConfirmedBet, defineBetHandler, TransactionClient} from "@/services/bets/baseBet";
+import {assertBettingOpen, BattleResult, BetContext, ConfirmedBet, defineBetHandler, TransactionClient} from "@/services/bets/baseBet";
 import {BetCreationError} from "./errors";
 import {splitProportionally} from "@/services/settlement/splitProportionally";
 
@@ -14,8 +14,13 @@ export const betOnWinnerHandler = defineBetHandler<typeof BetOnWinnerSchema, Per
   type: "betOnWinner",
   schema: BetOnWinnerSchema,
 
-  /** Un joueur ne peut pas miser sur les deux contenders d'une même bataille. */
+  /**
+   * Ferme les paris une fois la bataille démarrée (comme betOnBestShare), et
+   * refuse qu'un joueur mise sur les deux contenders d'une même bataille.
+   */
   async checkPreconditions(data: z.infer<typeof BetOnWinnerSchema>, ctx: BetContext) {
+    assertBettingOpen(ctx.battle);
+
     const conflictingBet = await ctx.db.bet.findFirst({
       where: {
         userId: ctx.userId,

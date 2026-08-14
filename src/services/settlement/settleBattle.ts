@@ -9,6 +9,8 @@ type Breakdown = Record<
     pot: number;
     winners: Record<string, number>;
     refunded: boolean;
+    /** Part du pot jamais reversée (remboursement partiel), en plus petite unité. */
+    burned?: number;
   }
 >;
 
@@ -61,12 +63,21 @@ export async function settleBattle(db: PrismaClient, battleId: number | string):
 
       const winnerShares = handler.computePayouts(bets, battleResult);
 
+      let burned = 0;
+
       if (winnerShares.size === 0) {
         // Aucun pari de ce type ne satisfait la condition de victoire :
-        // rembourser chaque parieur sa propre mise plutôt que de laisser des
-        // fonds bloqués en escrow sans destinataire légitime.
+        // rembourser chaque parieur sa mise (ou une fraction, `refundRate`)
+        // plutôt que de laisser des fonds bloqués en escrow sans
+        // destinataire légitime. La part non remboursée reste en escrow,
+        // jamais reversée ("brûlée") — pas de destinataire à lui trouver.
+        const refundRate = handler.refundRate ?? 1;
         for (const bet of bets) {
-          refundsByUser.set(bet.userId, (refundsByUser.get(bet.userId) ?? 0) + bet.amount);
+          const refundAmount = Math.floor(bet.amount * refundRate);
+          burned += bet.amount - refundAmount;
+          if (refundAmount > 0) {
+            refundsByUser.set(bet.userId, (refundsByUser.get(bet.userId) ?? 0) + refundAmount);
+          }
           betResults.push({id: bet.id, result: "cancelled"});
         }
       } else {
@@ -82,6 +93,7 @@ export async function settleBattle(db: PrismaClient, battleId: number | string):
         pot,
         winners: Object.fromEntries([...winnerShares].map(([userId, amount]) => [userId.toString(), amount])),
         refunded: winnerShares.size === 0,
+        ...(burned > 0 ? {burned} : {}),
       };
     }
 

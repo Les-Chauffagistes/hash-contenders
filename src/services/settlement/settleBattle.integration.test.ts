@@ -214,7 +214,7 @@ describe("settleBattle", () => {
     expect(winnerPayouts.map((p) => Number(p.amount)).sort((a, b) => a - b)).toEqual([50, 100]);
   });
 
-  it("betOnBestShare : seule la difficulté atteinte la plus élevée gagne, les paris plus faibles perdent", async () => {
+  it("betOnBestShare : 2 diffs distinctes atteintes se partagent le pot 70/30", async () => {
     vi.mocked(getBattleStatus).mockResolvedValue(
       battleStatus({
         battle_id: 10,
@@ -224,20 +224,96 @@ describe("settleBattle", () => {
       }),
     );
 
-    await createConfirmedBetOnBestShare("10", 90, 40, BigInt(100), "k16"); // atteint, mais plus faible
-    await createConfirmedBetOnBestShare("10", 91, 25, BigInt(400), "k17"); // atteint, le plus élevé -> gagne
+    await createConfirmedBetOnBestShare("10", 90, 40, BigInt(100), "k16"); // atteint, 2e rang -> 30%
+    await createConfirmedBetOnBestShare("10", 91, 25, BigInt(400), "k17"); // atteint, 1er rang -> 70%
     await createConfirmedBetOnBestShare("10", 92, 35, BigInt(600), "k18"); // non atteint
 
     await settleBattle(db, 10);
 
-    const payouts = await db.payoutOutbox.findMany({where: {battleId: "10"}});
-    expect(payouts).toHaveLength(1);
-    expect(payouts[0].direction).toBe("escrow_to_winner");
-    expect(payouts[0].userId).toBe(BigInt(91));
-    expect(Number(payouts[0].amount)).toBe(100);
+    const payouts = await db.payoutOutbox.findMany({where: {battleId: "10", direction: "escrow_to_winner"}});
+    // Pot = 100 (toutes les mises). 70% -> 70 pour le rang 1, 30% -> 30 pour le rang 2.
+    const byUser = new Map(payouts.map((p) => [p.userId.toString(), Number(p.amount)]));
+    expect(byUser.get("91")).toBe(70);
+    expect(byUser.get("90")).toBe(30);
+    expect(payouts).toHaveLength(2);
 
     const results = await db.bet.findMany({where: {battleId: "10"}, orderBy: {userId: "asc"}});
-    expect(results.map((b) => b.result)).toEqual(["lost", "won", "lost"]);
+    expect(results.map((b) => b.result)).toEqual(["won", "won", "lost"]);
+  });
+
+  it("betOnBestShare : 3 diffs distinctes atteintes se partagent le pot 60/30/10", async () => {
+    vi.mocked(getBattleStatus).mockResolvedValue(
+      battleStatus({
+        battle_id: 12,
+        hits: [
+          {date: new Date(), battle_id: 12, contender_1_best_diff: 500, contender_2_best_diff: 100, block_height: 1, winner: null},
+        ],
+      }),
+    );
+
+    await createConfirmedBetOnBestShare("12", 200, 50, BigInt(400), "k22"); // rang 1 -> 60%
+    await createConfirmedBetOnBestShare("12", 201, 50, BigInt(300), "k23"); // rang 2 -> 30%
+    await createConfirmedBetOnBestShare("12", 202, 50, BigInt(200), "k24"); // rang 3 -> 10%
+    await createConfirmedBetOnBestShare("12", 203, 50, BigInt(100), "k25"); // atteint, hors top 3
+
+    await settleBattle(db, 12);
+
+    const settlement = await db.battleSettlement.findUnique({where: {battleId: "12"}});
+    expect(settlement?.potTotal).toBe(BigInt(200));
+
+    const payouts = await db.payoutOutbox.findMany({where: {battleId: "12", direction: "escrow_to_winner"}});
+    const byUser = new Map(payouts.map((p) => [p.userId.toString(), Number(p.amount)]));
+    expect(byUser.get("200")).toBe(120);
+    expect(byUser.get("201")).toBe(60);
+    expect(byUser.get("202")).toBe(20);
+    expect(byUser.has("203")).toBe(false);
+    expect(payouts.reduce((sum, p) => sum + Number(p.amount), 0)).toBe(200);
+
+    const loser = await db.bet.findFirst({where: {battleId: "12", userId: 203}});
+    expect(loser?.result).toBe("lost");
+  });
+
+  it("betOnBestShare : rembourse 80% et brûle 20% si aucune diff n'est atteinte", async () => {
+    vi.mocked(getBattleStatus).mockResolvedValue(
+      battleStatus({
+        battle_id: 13,
+        hits: [
+          {date: new Date(), battle_id: 13, contender_1_best_diff: 500, contender_2_best_diff: 100, block_height: 1, winner: null},
+        ],
+      }),
+    );
+
+    await createConfirmedBetOnBestShare("13", 300, 50, BigInt(600), "k26"); // non atteint
+    await createConfirmedBetOnBestShare("13", 301, 50, BigInt(700), "k27"); // non atteint
+
+    await settleBattle(db, 13);
+
+    const refunds = await db.payoutOutbox.findMany({where: {battleId: "13", direction: "escrow_to_refund"}});
+    expect(refunds.map((r) => Number(r.amount)).sort()).toEqual([40, 40]);
+    expect(await db.payoutOutbox.count({where: {battleId: "13", direction: "escrow_to_winner"}})).toBe(0);
+
+    const settlement = await db.battleSettlement.findUnique({where: {battleId: "13"}});
+    const breakdown = settlement?.breakdown as Record<string, {burned?: number}>;
+    expect(breakdown.betOnBestShare.burned).toBe(20);
+
+    const bets = await db.bet.findMany({where: {battleId: "13"}});
+    expect(bets.every((b) => b.result === "cancelled")).toBe(true);
+  });
+
+  it("betOnWinner : rembourse toujours 100% sans rien brûler (refundRate absent)", async () => {
+    vi.mocked(getBattleStatus).mockResolvedValue(battleStatus({battle_id: 14}));
+
+    await createConfirmedBetOnWinner("14", 400, 40, 2, "k28");
+    await createConfirmedBetOnWinner("14", 401, 60, 2, "k29");
+
+    await settleBattle(db, 14);
+
+    const refunds = await db.payoutOutbox.findMany({where: {battleId: "14", direction: "escrow_to_refund"}});
+    expect(refunds.map((r) => Number(r.amount)).sort()).toEqual([40, 60]);
+
+    const settlement = await db.battleSettlement.findUnique({where: {battleId: "14"}});
+    const breakdown = settlement?.breakdown as Record<string, {burned?: number}>;
+    expect(breakdown.betOnWinner.burned).toBeUndefined();
   });
 
   it("betOnBestShare : les ex aequo sur la difficulté gagnante se partagent le pot au prorata", async () => {

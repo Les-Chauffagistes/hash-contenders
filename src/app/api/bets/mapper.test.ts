@@ -178,6 +178,7 @@ describe("toBattleBetsView", () => {
             battle,
             [publicBet({id: "a"}), publicBet({id: "b", userId: BigInt(7), amount: 250})],
             new Map([["3", "Testuser"], ["7", "Alice"]]),
+            true,
         );
 
         expect(view.pot).toBe(350);
@@ -189,14 +190,53 @@ describe("toBattleBetsView", () => {
     });
 
     it("leaves the pseudo null when the directory did not return the player", () => {
-        const view = toBattleBetsView("42", battle, [publicBet()], new Map());
+        const view = toBattleBetsView("42", battle, [publicBet()], new Map(), true);
 
         expect(view.bets[0].player).toEqual({id: "3", pseudo: null});
     });
 
     it("never exposes the escrow status", () => {
-        const view = toBattleBetsView("42", battle, [publicBet()], new Map());
+        const view = toBattleBetsView("42", battle, [publicBet()], new Map(), true);
 
         expect(view.bets[0]).not.toHaveProperty("status");
+    });
+
+    it("echoes betOnBestShareRevealed as-is", () => {
+        const view = toBattleBetsView("42", battle, [publicBet()], new Map(), true);
+
+        expect(view.betOnBestShareRevealed).toBe(true);
+    });
+
+    it("hides betOnBestShare bets and excludes them from the pot when not revealed", () => {
+        const bestShareBet = publicBet({
+            id: "best-share",
+            userId: BigInt(9),
+            amount: 50,
+            betOnWinner: null,
+            betOnBestShare: {betId: "best-share", diff: BigInt(2_500)},
+        });
+        const winnerBet = publicBet({id: "winner", amount: 100});
+
+        const view = toBattleBetsView("42", battle, [winnerBet, bestShareBet], new Map(), false);
+
+        expect(view.betOnBestShareRevealed).toBe(false);
+        expect(view.bets.map((bet) => bet.id)).toEqual(["winner"]);
+        expect(view.pot).toBe(100);
+    });
+
+    it("reveals betOnBestShare bets and includes them in the pot once revealed", () => {
+        const bestShareBet = publicBet({
+            id: "best-share",
+            userId: BigInt(9),
+            amount: 50,
+            betOnWinner: null,
+            betOnBestShare: {betId: "best-share", diff: BigInt(2_500)},
+        });
+        const winnerBet = publicBet({id: "winner", amount: 100});
+
+        const view = toBattleBetsView("42", battle, [winnerBet, bestShareBet], new Map(), true);
+
+        expect(view.bets.map((bet) => bet.id)).toEqual(["winner", "best-share"]);
+        expect(view.pot).toBe(150);
     });
 });

@@ -76,7 +76,7 @@
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
 }
 
-.deleteMenuItem {
+.menuItem {
   display: flex;
   align-items: center;
   gap: 9px;
@@ -85,10 +85,29 @@
   border: 0;
   border-radius: 7px;
   background: transparent;
-  color: #ef6a6a;
   font-size: 14px;
   font-weight: 600;
   text-align: left;
+}
+
+.betsMenuItem {
+  color: var(--text-main);
+}
+
+.betsMenuItem:hover {
+  background: var(--bg-soft);
+}
+
+.betMenuItem {
+  color: var(--accent);
+}
+
+.betMenuItem:hover {
+  background: var(--accent-soft);
+}
+
+.deleteMenuItem {
+  color: #ef6a6a;
 }
 
 .deleteMenuItem:hover {

@@ -38,7 +38,9 @@ export default function BattleBetGroup({battleBets}: Readonly<{battleBets: UserB
                 </span>
             </Link>
             <div className={styles.bets}>
-                {battleBets.bets.map((bet) => <BetCard key={bet.id} bet={bet} battle={battle} />)}
+                {battleBets.bets.map((bet) => (
+                    <BetCard key={bet.id} bet={bet} battle={battle} battleId={battleBets.battleId} />
+                ))}
             </div>
         </section>
     );

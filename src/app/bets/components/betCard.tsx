@@ -1,6 +1,8 @@
+import Link from "next/link";
 import type {BattleSummary, UserBetItem} from "@/contracts/bets";
 import formatNumber from "@/lib/NumberFormatter";
-import {describePrediction, describeState} from "../betPresentation";
+import {describePrediction, describeState, isAwaitingOutcome} from "../betPresentation";
+import {getBetType} from "../betTypes";
 import styles from "./betCard.module.css";
 
 const dateFormatter = new Intl.DateTimeFormat("fr-FR", {
@@ -19,9 +21,14 @@ const dateFormatter = new Intl.DateTimeFormat("fr-FR", {
 export default function BetCard({
     bet,
     battle,
-}: Readonly<{bet: UserBetItem; battle: BattleSummary | null}>) {
+    battleId,
+}: Readonly<{bet: UserBetItem; battle: BattleSummary | null; battleId: string}>) {
     const prediction = describePrediction(bet, battle);
     const state = describeState(bet);
+    // Seuls les types à ticket fixe (betOnBestShare) se modifient en resoumettant
+    // le formulaire ; betOnWinner empile un nouveau pari à chaque soumission, et
+    // rien ne se modifie une fois l'issue de la bataille connue.
+    const isEditable = Boolean(getBetType(bet.type)?.fixedAmount) && isAwaitingOutcome(bet);
 
     return (
         <article className={styles.betcard}>
@@ -34,6 +41,14 @@ export default function BetCard({
                 <span className={styles.amount}>{formatNumber(bet.amount)} hashcoins</span>
                 <span className={styles.separator}>·</span>
                 <time dateTime={bet.createdAt}>{dateFormatter.format(new Date(bet.createdAt))}</time>
+                {isEditable && (
+                    <>
+                        <span className={styles.separator}>·</span>
+                        <Link href={`/bets/create?battle_id=${battleId}&bet_type=${bet.type}`} className={styles.editLink}>
+                            Modifier
+                        </Link>
+                    </>
+                )}
             </p>
         </article>
     );
