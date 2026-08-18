@@ -7,9 +7,12 @@ import {BettingClosedError} from "@/services/bets/errors";
 
 export const CURRENCY = process.env.BETS_CURRENCY!;
 
+/** Bet.amount est stocké en Postgres Int (32 bits) — borne haute alignée sur ça. */
+const MAX_BET_AMOUNT = 2_147_483_647;
+
 export const CreateBetSchema = z.object({
   battle_id: z.number().int(),
-  amount: z.number().int(),
+  amount: z.number().int().positive().max(MAX_BET_AMOUNT),
   idempotency_key: z.uuid(),
   bet: z.object({
     type: z.string()
