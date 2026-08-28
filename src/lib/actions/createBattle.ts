@@ -5,6 +5,7 @@ import { extractUserAccessToken } from "@/app/api/lib/auth";
 import { UnauthorizedError } from "@/app/api/lib/exceptions";
 import { CreateBattle } from "../../../models/CreateBattle";
 import { redirect } from "next/navigation";
+import { logger } from "@/lib/logger";
 
 type FormState = {
     errors?: Record<string, string>;
@@ -79,7 +80,7 @@ export async function createBattleAction(
         if (e instanceof UnauthorizedError) {
             return { errors: { _form: "Votre session a expiré. Reconnectez-vous pour créer une bataille." } };
         }
-        console.error("error submitting request", e)
+        logger.error("error submitting request", e)
         return { errors: { _form: "Erreur serveur" } };
     }
 

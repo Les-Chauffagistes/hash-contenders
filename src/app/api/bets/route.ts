@@ -3,6 +3,7 @@ import {getBattlesByIds, getUserBets, mergeBetsWithBattles} from "@/app/services
 import {prisma} from "@/server/db";
 import {NextResponse} from "next/server";
 import {UnauthorizedError} from "@/app/api/lib/exceptions";
+import {logger} from "@/lib/logger";
 
 export async function GET(req: Request) {
     try {
@@ -16,7 +17,7 @@ export async function GET(req: Request) {
         if (error instanceof UnauthorizedError) {
             return NextResponse.json({"error": "Unauthorized"}, {status: 401});
         }
-        console.error(error);
+        logger.error(error);
         return NextResponse.json({"error": "Internal server error"}, {status: 500});
     }
 }

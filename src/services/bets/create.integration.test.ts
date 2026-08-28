@@ -87,7 +87,7 @@ describe("submitBet avec PostgreSQL", () => {
   });
 
   it("persiste un pari sur le gagnant et sa relation", async () => {
-    const idempotencyKey = "430f844f-a821-4055-b0ca-75fe30f32030";
+    const idempotencyKey = "430f844f-a821-4055-b0ca-75fe30f32030"; // gitleaks:allow
 
     await submitBet(
       db,
@@ -125,7 +125,7 @@ describe("submitBet avec PostgreSQL", () => {
   });
 
   it("persiste un pari sur la meilleure share avec un bigint", async () => {
-    const idempotencyKey = "ef7d9363-50ce-428d-b893-b257b94fcac7";
+    const idempotencyKey = "ef7d9363-50ce-428d-b893-b257b94fcac7"; // gitleaks:allow
 
     await submitBet(
       db,
@@ -159,7 +159,7 @@ describe("submitBet avec PostgreSQL", () => {
   });
 
   it("conserve le pari en canceled lorsque le débit échoue", async () => {
-    const idempotencyKey = "1215178c-8117-4432-a24e-f9d7ab0b4f6b";
+    const idempotencyKey = "1215178c-8117-4432-a24e-f9d7ab0b4f6b"; // gitleaks:allow
     vi.mocked(burnUserCoins).mockRejectedValueOnce(new Error("coins API unavailable"));
 
     await expect(
@@ -195,7 +195,7 @@ describe("submitBet avec PostgreSQL", () => {
     const submission = {
       battle_id: 123,
       amount: 50,
-      idempotency_key: "de437c19-e7ee-4f76-b3ec-f9ce1a48302b",
+      idempotency_key: "de437c19-e7ee-4f76-b3ec-f9ce1a48302b", // gitleaks:allow
       bet: {
         type: "betOnWinner",
         winner_index: 1,
