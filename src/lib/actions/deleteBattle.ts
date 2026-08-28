@@ -3,6 +3,7 @@
 import { deleteBattleById } from "@/app/api";
 import { extractUserAccessToken } from "@/app/api/lib/auth";
 import { UnauthorizedError } from "@/app/api/lib/exceptions";
+import { logger } from "@/lib/logger";
 
 type DeleteBattleResult =
     | { success: true }
@@ -30,7 +31,7 @@ export async function deleteBattleAction(battleId: number): Promise<DeleteBattle
         if (error instanceof UnauthorizedError) {
             return { success: false, error: "Votre session a expiré. Veuillez vous reconnecter." };
         }
-        console.error("[deleteBattleAction]", error);
+        logger.error("[deleteBattleAction]", error);
         return { success: false, error: "Impossible de supprimer cette bataille." };
     }
 }

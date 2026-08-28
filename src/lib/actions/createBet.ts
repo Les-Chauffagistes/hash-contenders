@@ -16,6 +16,7 @@ import {
     InvalidBetDataError,
     InvalidBetTypeError,
 } from "@/services/bets/errors";
+import { logger } from "@/lib/logger";
 
 export type FormState = {
     errors?: Record<string, string>;
@@ -87,7 +88,7 @@ export async function createBetAction(
         if (e instanceof BurnFailedError) return { errors: { _form: "Impossible de débiter les coins, pari annulé" } };
         if (e instanceof InvalidBetTypeError) return { errors: { _form: "Type de pari invalide" } };
         if (e instanceof InvalidBetDataError) return { errors: { _form: "Données du pari invalides" } };
-        console.error("[createBetAction]", e);
+        logger.error("[createBetAction]", e);
         return { errors: { _form: "Une erreur inattendue s'est produite, veuillez réessayer" } };
     }
 

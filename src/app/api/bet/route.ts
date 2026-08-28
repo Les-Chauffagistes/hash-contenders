@@ -12,6 +12,7 @@ import {
 import {extractUserAccessToken} from "../lib/auth";
 import {prisma} from "@/server/db";
 import {NextResponse} from "next/server";
+import {logger} from "@/lib/logger";
 
 
 export async function POST(request: Request) {
@@ -33,7 +34,7 @@ export async function POST(request: Request) {
         if (e instanceof BurnFailedError) return NextResponse.json({error: "Impossible de débiter les coins, pari annulé"}, {status: 502});
         if (e instanceof InvalidBetTypeError) return NextResponse.json({error: "Type de pari invalide"}, {status: 400});
         if (e instanceof InvalidBetDataError) return NextResponse.json({error: "Données du pari invalides"}, {status: 400});
-        console.error("[POST /api/bet]", e);
+        logger.error("[POST /api/bet]", e);
         return NextResponse.json({error: "Une erreur inattendue s'est produite"}, {status: 500});
     }
 

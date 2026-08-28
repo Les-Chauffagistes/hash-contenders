@@ -2,6 +2,7 @@ import {components} from "@les-chauffagistes/authentication-types";
 import {jwtVerify} from "jose"
 import {UnauthorizedError} from "@/app/api/lib/exceptions";
 import {cookies} from "next/headers";
+import {logger} from "@/lib/logger";
 
 const SECRET = new TextEncoder().encode(process.env.JWT_SECRET)
 
@@ -13,7 +14,7 @@ export async function decodeAccessToken(token: string): Promise<components["sche
             algorithms: ["HS256"]
         })
     } catch (error) {
-        console.log(error)
+        logger.error(error)
         throw new UnauthorizedError("Token expired")
     }
     const payload = decodedJwt.payload
@@ -32,10 +33,10 @@ export async function decodeAccessToken(token: string): Promise<components["sche
 export async function extractUserAccessToken() {
     const cookieStore = await cookies();
     const access_token = cookieStore.get("access_token")?.value;
-    console.log("token ending with", access_token?.slice(-5));
+    logger.info("token ending with", access_token?.slice(-5));
     if (!access_token) throw new UnauthorizedError("Token not found");
     const me = await decodeAccessToken(access_token);
-    console.debug("current user:", me.pseudo)
+    logger.debug("current user:", me.pseudo)
     if (!me) throw new UnauthorizedError("Token expired or invalid");
     return access_token;
 }
