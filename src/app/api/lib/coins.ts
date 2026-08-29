@@ -1,5 +1,7 @@
+import {tracedFetch} from "@chauffagistes/cmn";
+
 export async function getUserCoins(access_token: string, currency: string): Promise<{ "balance": number }> {
-    return await (fetch(`${process.env.COINS_API_URL}/balance?currency=${currency}`, {
+    return await (tracedFetch(`${process.env.COINS_API_URL}/balance?currency=${currency}`, {
         headers: {
             "Authorization": access_token,
             "X-Api-Key": process.env.COINS_API_KEY!,
@@ -8,7 +10,7 @@ export async function getUserCoins(access_token: string, currency: string): Prom
 }
 
 export async function burnUserCoins(access_token: string, currency: string, amount: number, idempotencyKey: string, reason: string = "Bet created") {
-    const resp =  await fetch(
+    const resp =  await tracedFetch(
         `${process.env.COINS_API_URL}/burn`,
         {
             method: 'DELETE',

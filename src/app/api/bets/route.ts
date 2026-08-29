@@ -4,8 +4,9 @@ import {prisma} from "@/server/db";
 import {NextResponse} from "next/server";
 import {UnauthorizedError} from "@/app/api/lib/exceptions";
 import {logger} from "@/lib/logger";
+import {withRequestLogging} from "@chauffagistes/cmn";
 
-export async function GET(req: Request) {
+export const GET = withRequestLogging(async (req: Request) => {
     try {
         const access_token = await extractUserAccessToken();
         const user = await decodeAccessToken(access_token);
@@ -20,4 +21,4 @@ export async function GET(req: Request) {
         logger.error(error);
         return NextResponse.json({"error": "Internal server error"}, {status: 500});
     }
-}
+});

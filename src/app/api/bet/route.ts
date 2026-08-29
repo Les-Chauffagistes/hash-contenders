@@ -13,9 +13,10 @@ import {extractUserAccessToken} from "../lib/auth";
 import {prisma} from "@/server/db";
 import {NextResponse} from "next/server";
 import {logger} from "@/lib/logger";
+import {withRequestLogging} from "@chauffagistes/cmn";
 
 
-export async function POST(request: Request) {
+export const POST = withRequestLogging(async (request: Request) => {
     const access_token = await extractUserAccessToken();
 
     const json = await request.json();
@@ -40,4 +41,4 @@ export async function POST(request: Request) {
 
 
     return new Response("ok");
-}
+});
