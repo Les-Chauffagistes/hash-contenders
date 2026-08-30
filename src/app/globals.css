@@ -5,6 +5,7 @@
   --bg-alt: #15151a;
   --bg-soft: #1c1c22;
   --bg-blue: #7575902a;
+  --red: #ef4444;
   
   --border-color: #34343e;
   --border-color-soft: #34343e5c;
@@ -55,7 +56,7 @@ button.primary {
   transition: background-color 0.2s ease;
 }
 
-button.primary:hover {
+button.primary:enabled:hover {
   background-color: var(--accent-soft);
 }
 
@@ -69,7 +70,7 @@ button.secondary {
   color: var(--accent);
 }
 
-button.secondary:hover {
+button.secondary:enabled:hover {
   background-color: var(--accent);
   color: var(--background);
 }
@@ -78,8 +79,29 @@ button.tertiary {
   border: unset;
   background-color: unset;
   padding: 0;
-  color: var(--orange);
+  color: var(--accent);
   font-weight: 600;
+}
+
+button.danger {
+  border: unset;
+  background-color: unset;
+  padding: 0;
+  color: var(--red);
+  font-weight: 600;
+}
+
+button.danger:enabled:focus,
+button.danger:enabled:hover,
+button.tertiary:enabled:focus,
+button.tertiary:enabled:hover {
+  text-decoration: underline;
+}
+
+button[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: grayscale(0.2) brightness(0.85);
 }
 
 .break {

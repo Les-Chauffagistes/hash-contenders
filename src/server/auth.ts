@@ -1,6 +1,6 @@
-import {User} from "../../../../models/User";
+import {User} from "../../models/User";
 import {jwtVerify} from "jose"
-import {UnauthorizedError} from "@/app/api/lib/exceptions";
+import {UnauthorizedError} from "@/lib/errors";
 import {cookies} from "next/headers";
 import {logger} from "@/lib/logger";
 
@@ -30,13 +30,17 @@ export async function decodeAccessToken(token: string): Promise<User> {
  * Ensure the user is logged in and returns the access token. The access token provided in the query must be valid.
  * Will raise an Unauthorized error is no valid token is provided.
  */
-export async function extractUserAccessToken() {
+export async function extractAuthenticatedUser() {
     const cookieStore = await cookies();
     const access_token = cookieStore.get("access_token")?.value;
     logger.info("token ending with", access_token?.slice(-5));
     if (!access_token) throw new UnauthorizedError("Token not found");
-    const me = await decodeAccessToken(access_token);
-    logger.debug("current user:", me.pseudo)
-    if (!me) throw new UnauthorizedError("Token expired or invalid");
-    return access_token;
+    const user = await decodeAccessToken(access_token);
+    logger.debug("current user:", user.pseudo)
+    if (!user) throw new UnauthorizedError("Token expired or invalid");
+    return {accessToken: access_token, user};
+}
+
+export async function extractUserAccessToken() {
+    return (await extractAuthenticatedUser()).accessToken;
 }

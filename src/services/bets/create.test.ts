@@ -2,26 +2,28 @@ import {beforeEach, describe, expect, it, vi} from "vitest";
 import {Prisma, type PrismaClient} from "@/generated/prisma/client";
 import type {BattleStatus} from "../../../models/BattleStatus";
 
-vi.mock("@/app/api", () => ({
+vi.mock("@/clients/referee", () => ({
   getBattleStatus: vi.fn(),
 }));
 
-vi.mock("@/app/api/lib/coins", () => ({
-  burnUserCoins: vi.fn(),
+vi.mock("@/clients/wallet", () => ({
+  transferCoins: vi.fn(),
   getUserCoins: vi.fn(),
+  InsufficientCoinsError: class InsufficientCoinsError extends Error {},
 }));
 
-vi.mock("@/app/api/lib/auth", () => ({
+vi.mock("@/server/auth", () => ({
   decodeAccessToken: vi.fn(),
 }));
 
-import {getBattleStatus} from "@/app/api";
-import {burnUserCoins, getUserCoins} from "@/app/api/lib/coins";
-import {decodeAccessToken} from "@/app/api/lib/auth";
+import {getBattleStatus} from "@/clients/referee";
+import {transferCoins, getUserCoins, InsufficientCoinsError} from "@/clients/wallet";
+import {decodeAccessToken} from "@/server/auth";
 import {
   BattleFinishedError,
   BetCreationError,
-  BurnFailedError,
+  BettingClosedError,
+  EscrowDebitFailedError,
   InsufficientBalanceError,
   InvalidBetDataError,
   InvalidBetTypeError,
@@ -36,33 +38,43 @@ const battle: BattleStatus = {
   start_height: 1,
   is_finished: false,
   hits: [],
-  current_round: 1,
+  current_round: 0,
   contender_info: [],
 };
 
 type TransactionMock = {
   bet: {
     create: ReturnType<typeof vi.fn>;
+    findFirst: ReturnType<typeof vi.fn>;
   };
   betOnWinner: {
     create: ReturnType<typeof vi.fn>;
   };
   betOnBestShare: {
+    upsert: ReturnType<typeof vi.fn>;
+  };
+  payoutOutbox: {
     create: ReturnType<typeof vi.fn>;
   };
+  $executeRaw: ReturnType<typeof vi.fn>;
 };
 
 function createDb() {
   const tx: TransactionMock = {
     bet: {
       create: vi.fn().mockResolvedValue({id: "bet-id"}),
+      findFirst: vi.fn().mockResolvedValue(null),
     },
     betOnWinner: {
       create: vi.fn().mockResolvedValue(undefined),
     },
     betOnBestShare: {
+      upsert: vi.fn().mockResolvedValue(undefined),
+    },
+    payoutOutbox: {
       create: vi.fn().mockResolvedValue(undefined),
     },
+    $executeRaw: vi.fn().mockResolvedValue(undefined),
   };
 
   const db = {
@@ -71,8 +83,14 @@ function createDb() {
       findFirst: vi.fn().mockResolvedValue(null),
       update: vi.fn().mockResolvedValue(undefined),
     },
+    payoutOutbox: {
+      update: vi.fn().mockResolvedValue(undefined),
+    },
     $transaction: vi.fn(
-      async (callback: (transaction: TransactionMock) => Promise<void>) => callback(tx),
+      async (arg: ((transaction: TransactionMock) => Promise<void>) | unknown[]) => {
+        if (typeof arg === "function") return arg(tx);
+        return Promise.all(arg as Promise<unknown>[]);
+      },
     ),
   };
 
@@ -88,7 +106,7 @@ describe("submitBet", () => {
       pseudo: "mineur",
     });
     vi.mocked(getUserCoins).mockResolvedValue({balance: 1_000});
-    vi.mocked(burnUserCoins).mockResolvedValue(undefined);
+    vi.mocked(transferCoins).mockResolvedValue(undefined);
   });
 
   it("refuse un type de pari inconnu avant tout accès à la base", async () => {
@@ -136,7 +154,7 @@ describe("submitBet", () => {
 
   it("ignore le rejeu d'un pari déjà traité", async () => {
     const {db, prisma} = createDb();
-    db.bet.findUnique.mockResolvedValue({status: "settled"});
+    db.bet.findUnique.mockResolvedValue({status: "confirmed"});
 
     await submitBet(
       prisma,
@@ -154,12 +172,12 @@ describe("submitBet", () => {
 
     expect(getBattleStatus).not.toHaveBeenCalled();
     expect(db.$transaction).not.toHaveBeenCalled();
-    expect(burnUserCoins).not.toHaveBeenCalled();
+    expect(transferCoins).not.toHaveBeenCalled();
   });
 
-  it("signale à nouveau l'échec du débit d'un pari annulé", async () => {
+  it("signale à nouveau l'échec du débit d'un pari void", async () => {
     const {db, prisma} = createDb();
-    db.bet.findUnique.mockResolvedValue({status: "canceled"});
+    db.bet.findUnique.mockResolvedValue({status: "void"});
 
     await expect(
       submitBet(
@@ -175,10 +193,10 @@ describe("submitBet", () => {
         },
         "access-token",
       ),
-    ).rejects.toBeInstanceOf(BurnFailedError);
+    ).rejects.toBeInstanceOf(EscrowDebitFailedError);
 
     expect(db.$transaction).not.toHaveBeenCalled();
-    expect(burnUserCoins).not.toHaveBeenCalled();
+    expect(transferCoins).not.toHaveBeenCalled();
   });
 
   it("refuse un pari sur une bataille terminée", async () => {
@@ -202,6 +220,26 @@ describe("submitBet", () => {
     ).rejects.toBeInstanceOf(BattleFinishedError);
 
     expect(decodeAccessToken).not.toHaveBeenCalled();
+    expect(db.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("refuse un pari betOnWinner une fois la bataille démarrée", async () => {
+    const {db, prisma} = createDb();
+    vi.mocked(getBattleStatus).mockResolvedValueOnce({...battle, current_round: 1});
+
+    await expect(
+      submitBet(
+        prisma,
+        {
+          battle_id: 123,
+          amount: 50,
+          idempotency_key: "3f2b9a8f-6a19-4e39-9b7b-5f0f6f6b6f9d",
+          bet: {type: "betOnWinner", winner_index: 1},
+        },
+        "access-token",
+      ),
+    ).rejects.toBeInstanceOf(BettingClosedError);
+
     expect(db.$transaction).not.toHaveBeenCalled();
   });
 
@@ -250,10 +288,10 @@ describe("submitBet", () => {
     ).rejects.toBeInstanceOf(InsufficientBalanceError);
 
     expect(db.$transaction).not.toHaveBeenCalled();
-    expect(burnUserCoins).not.toHaveBeenCalled();
+    expect(transferCoins).not.toHaveBeenCalled();
   });
 
-  it("insère le pari sur le gagnant et sa spécialisation dans la même transaction", async () => {
+  it("insère le pari, sa spécialisation et la ligne outbox dans la même transaction", async () => {
     const {db, prisma, tx} = createDb();
     const submission = {
       battle_id: 123,
@@ -267,7 +305,6 @@ describe("submitBet", () => {
 
     await submitBet(prisma, submission, "access-token");
 
-    expect(db.$transaction).toHaveBeenCalledOnce();
     expect(tx.bet.create).toHaveBeenCalledWith({
       data: {
         battleId: "123",
@@ -282,25 +319,40 @@ describe("submitBet", () => {
         betId: "bet-id",
       },
     });
-    expect(tx.betOnBestShare.create).not.toHaveBeenCalled();
-    expect(burnUserCoins).toHaveBeenCalledWith(
-      "access-token",
-      "test-coins",
-      50,
-      "bet-id",
-      JSON.stringify(submission),
-    );
+    expect(tx.betOnBestShare.upsert).not.toHaveBeenCalled();
+    expect(tx.payoutOutbox.create).toHaveBeenCalledWith({
+      data: {
+        battleId: "123",
+        userId: 42,
+        amount: 50,
+        direction: "debit_to_escrow",
+        idempotencyKey: "bet:123:bet-id",
+      },
+    });
+    expect(transferCoins).toHaveBeenCalledWith({
+      fromUserId: 42,
+      toUserId: -123,
+      amount: 50,
+      currency: "test-coins",
+      idempotencyKey: "bet:123:bet-id",
+      reason: "Bet placed",
+    });
     expect(db.bet.update).toHaveBeenCalledWith({
       where: {id: "bet-id"},
-      data: {status: "settled"},
+      data: {status: "confirmed"},
+    });
+    expect(db.payoutOutbox.update).toHaveBeenCalledWith({
+      where: {idempotencyKey: "bet:123:bet-id"},
+      data: {status: "dispatched"},
     });
   });
 
   it("insère le pari sur la meilleure share avec la difficulté convertie", async () => {
     const {db, prisma, tx} = createDb();
+    vi.mocked(getBattleStatus).mockResolvedValueOnce({...battle, current_round: 0});
     const submission = {
       battle_id: 123,
-      amount: 75,
+      amount: 50,
       idempotency_key: "b459fd4f-1d68-44bf-a5ce-f4225789e4c4", // gitleaks:allow
       bet: {
         type: "betOnBestShare",
@@ -313,22 +365,90 @@ describe("submitBet", () => {
     expect(tx.bet.create).toHaveBeenCalledWith({
       data: {
         battleId: "123",
-        amount: 75,
+        amount: 50,
         userId: 42,
         idempotencyKey: submission.idempotency_key,
       },
     });
-    expect(tx.betOnBestShare.create).toHaveBeenCalledWith({
-      data: {
-        diff: 2_500,
-        betId: "bet-id",
-      },
+    expect(tx.betOnBestShare.upsert).toHaveBeenCalledWith({
+      where: {betId: "bet-id"},
+      update: {diff: 2_500, betId: "bet-id"},
+      create: {diff: 2_500, betId: "bet-id"},
     });
     expect(tx.betOnWinner.create).not.toHaveBeenCalled();
     expect(db.bet.update).toHaveBeenCalledWith({
       where: {id: "bet-id"},
-      data: {status: "settled"},
+      data: {status: "confirmed"},
     });
+  });
+
+  it("refuse un pari betOnBestShare dont le montant n'est pas le prix fixe du ticket", async () => {
+    const {db, prisma} = createDb();
+    vi.mocked(getBattleStatus).mockResolvedValueOnce({...battle, current_round: 0});
+
+    await expect(
+      submitBet(
+        prisma,
+        {
+          battle_id: 123,
+          amount: 75,
+          idempotency_key: "24d95a37-9d3c-4a19-9d92-6f3c9a1d78a2",
+          bet: {type: "betOnBestShare", diff: "2.5K"},
+        },
+        "access-token",
+      ),
+    ).rejects.toBeInstanceOf(InvalidBetDataError);
+
+    expect(db.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("refuse un pari betOnBestShare une fois la bataille démarrée", async () => {
+    const {db, prisma} = createDb();
+    vi.mocked(getBattleStatus).mockResolvedValueOnce({...battle, current_round: 1});
+
+    await expect(
+      submitBet(
+        prisma,
+        {
+          battle_id: 123,
+          amount: 50,
+          idempotency_key: "a2f9a8f2-6a19-4e39-9b7b-5f0f6f6b6f9d",
+          bet: {type: "betOnBestShare", diff: "2.5K"},
+        },
+        "access-token",
+      ),
+    ).rejects.toBeInstanceOf(BettingClosedError);
+
+    expect(db.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("édite le pari betOnBestShare existant au lieu d'en créer un nouveau", async () => {
+    const {db, prisma, tx} = createDb();
+    vi.mocked(getBattleStatus).mockResolvedValueOnce({...battle, current_round: 0});
+    db.bet.findFirst.mockResolvedValue({id: "existing-bet-id"});
+    tx.bet.findFirst.mockResolvedValue({id: "existing-bet-id"});
+
+    await submitBet(
+      prisma,
+      {
+        battle_id: 123,
+        amount: 50,
+        idempotency_key: "d2b5e6a7-2f2f-4b8a-9d2c-6a2c1e9a9f0b",
+        bet: {type: "betOnBestShare", diff: "3K"},
+      },
+      "access-token",
+    );
+
+    expect(getUserCoins).not.toHaveBeenCalled();
+    expect(tx.bet.create).not.toHaveBeenCalled();
+    expect(tx.payoutOutbox.create).not.toHaveBeenCalled();
+    expect(tx.betOnBestShare.upsert).toHaveBeenCalledWith({
+      where: {betId: "existing-bet-id"},
+      update: {diff: 3_000, betId: "existing-bet-id"},
+      create: {diff: 3_000, betId: "existing-bet-id"},
+    });
+    expect(transferCoins).not.toHaveBeenCalled();
+    expect(db.bet.update).not.toHaveBeenCalled();
   });
 
   it("n'effectue ni débit ni mise à jour si l'insertion spécialisée échoue", async () => {
@@ -348,13 +468,13 @@ describe("submitBet", () => {
     await expect(submitBet(prisma, submission, "access-token")).rejects.toBeInstanceOf(
       BetCreationError,
     );
-    expect(burnUserCoins).not.toHaveBeenCalled();
+    expect(transferCoins).not.toHaveBeenCalled();
     expect(db.bet.update).not.toHaveBeenCalled();
   });
 
   it("ignore une collision d'idempotence créée par une requête concurrente", async () => {
     const {db, prisma} = createDb();
-    db.$transaction.mockRejectedValue(
+    db.$transaction.mockRejectedValueOnce(
       new Prisma.PrismaClientKnownRequestError("Unique constraint failed", {
         code: "P2002",
         clientVersion: "7.7.0",
@@ -375,13 +495,13 @@ describe("submitBet", () => {
       "access-token",
     );
 
-    expect(burnUserCoins).not.toHaveBeenCalled();
+    expect(transferCoins).not.toHaveBeenCalled();
     expect(db.bet.update).not.toHaveBeenCalled();
   });
 
-  it("annule le pari si le débit des coins échoue", async () => {
+  it("annule le pari si le wallet refuse définitivement le débit (solde insuffisant)", async () => {
     const {db, prisma} = createDb();
-    vi.mocked(burnUserCoins).mockRejectedValueOnce(new Error("coins API unavailable"));
+    vi.mocked(transferCoins).mockRejectedValueOnce(new InsufficientCoinsError());
 
     await expect(
       submitBet(
@@ -397,12 +517,37 @@ describe("submitBet", () => {
         },
         "access-token",
       ),
-    ).rejects.toBeInstanceOf(BurnFailedError);
+    ).rejects.toBeInstanceOf(EscrowDebitFailedError);
 
-    expect(db.bet.update).toHaveBeenCalledOnce();
     expect(db.bet.update).toHaveBeenCalledWith({
       where: {id: "bet-id"},
-      data: {status: "canceled"},
+      data: {status: "void"},
     });
+    expect(db.payoutOutbox.update).toHaveBeenCalledWith({
+      where: {idempotencyKey: "bet:123:bet-id"},
+      data: {status: "failed", lastError: "insufficient balance"},
+    });
+  });
+
+  it("ne touche à rien si l'appel au wallet échoue pour une raison transitoire (réseau/timeout)", async () => {
+    const {db, prisma} = createDb();
+    vi.mocked(transferCoins).mockRejectedValueOnce(new Error("coins API unavailable"));
+
+    await submitBet(
+      prisma,
+      {
+        battle_id: 123,
+        amount: 50,
+        idempotency_key: "97fe4c30-5f60-40f0-9676-7dedcb4637dc",
+        bet: {
+          type: "betOnWinner",
+          winner_index: 1,
+        },
+      },
+      "access-token",
+    );
+
+    expect(db.bet.update).not.toHaveBeenCalled();
+    expect(db.payoutOutbox.update).not.toHaveBeenCalled();
   });
 });

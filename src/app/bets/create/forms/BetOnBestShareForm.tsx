@@ -2,6 +2,7 @@
 
 import { FormEvent } from "react";
 import { UNIT_VALUE_DRAFT_REGEX, UNIT_VALUE_PATTERN } from "@/lib/UnitConverter";
+import { BEST_SHARE_TICKET_PRICE } from "@/contracts/bets";
 import { BetTypeFormProps } from "./types";
 import styles from "../page.module.css";
 
@@ -28,7 +29,7 @@ function rejectInvalidInput(event: FormEvent<HTMLInputElement>) {
     if (!UNIT_VALUE_DRAFT_REGEX.test(nextValue)) event.preventDefault();
 }
 
-export default function BetOnBestShareForm({ errors }: Readonly<BetTypeFormProps>) {
+export default function BetOnBestShareForm({ errors, defaultValues }: Readonly<BetTypeFormProps>) {
     return (
         <div className={styles.field}>
             <label htmlFor="diff">Difficulté visée</label>
@@ -37,6 +38,7 @@ export default function BetOnBestShareForm({ errors }: Readonly<BetTypeFormProps
                 id="diff"
                 name="diff"
                 placeholder="250G"
+                defaultValue={defaultValues?.diff}
                 inputMode="decimal"
                 autoComplete="off"
                 onBeforeInput={rejectInvalidInput}
@@ -48,8 +50,10 @@ export default function BetOnBestShareForm({ errors }: Readonly<BetTypeFormProps
             />
             {errors?.diff && <p className={styles.errorLabel}>{errors.diff}</p>}
             <p className={styles.hint}>
-                Seule la difficulté la plus haute effectivement atteinte est récompensée : viser une difficulté qui
-                n&apos;est jamais atteinte fait perdre la mise.
+                Ticket à prix fixe ({BEST_SHARE_TICKET_PRICE} hashcoins), modifiable gratuitement et sans limite tant
+                que la bataille n&apos;a pas démarré. Les 3 difficultés les plus hautes effectivement atteintes se
+                partagent le pot (60% / 30% / 10%, ou moins de paliers s&apos;il y a moins de 3 difficultés
+                atteintes). Si aucune difficulté visée n&apos;est jamais atteinte, chaque ticket est remboursé à 80%.
             </p>
         </div>
     );

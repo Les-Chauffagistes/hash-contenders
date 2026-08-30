@@ -1,8 +1,8 @@
 "use server";
 
-import { createBattle } from "@/app/api";
-import { extractUserAccessToken } from "@/app/api/lib/auth";
-import { UnauthorizedError } from "@/app/api/lib/exceptions";
+import { createBattle } from "@/clients/referee";
+import { extractUserAccessToken } from "@/server/auth";
+import { UnauthorizedError } from "@/lib/errors";
 import { CreateBattle } from "../../../models/CreateBattle";
 import { redirect } from "next/navigation";
 import { logger } from "@/lib/logger";

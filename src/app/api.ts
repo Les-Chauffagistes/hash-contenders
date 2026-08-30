@@ -1,59 +1,14 @@
-import {Battle} from "../../models/Battle";
-import {BattleStatus} from "../../models/BattleStatus";
-import {CreateBattle} from "../../models/CreateBattle";
-import {Round} from "../../models/Hit";
 import {User} from "../../models/User"
-import {UnauthorizedError} from "@/app/api/lib/exceptions";
-import {UserBetListItem} from "@/app/bets/types";
+import type {BattleBetsView, UserBetsOverview} from "@/contracts/bets";
+import {UnauthorizedError} from "@/lib/errors";
 import {config} from "@/lib/config";
 
-
-export async function getBattleStatus(battleId: number | string, includeHits: boolean = false): Promise<BattleStatus> {
-    return await fetch(`${config.API_URL}/v1/status/${battleId}${includeHits ? "?includes=hits" : ""}`).then(data => data.json());
-}
-
-export async function getBattleHits(battleId: number | string): Promise<Round[]> {
-    return await fetch(`${config.API_URL}/v1/hits/${battleId}`).then(data => data.json());
-}
-
-export async function getAllBattles(): Promise<Battle[]> {
-    return await fetch(`${config.API_URL}/v1/battles`).then(data => data.json());
-}
-
-export async function deleteBattleById(battleId: number | string, accessToken: string): Promise<void> {
-    const res = await fetch(`${config.API_URL}/v1/battle/${battleId}`, {
-        method: "DELETE",
-        headers: {
-            "Authorization": accessToken
-        }
-    });
-    if (res.status === 401) {
-        throw new UnauthorizedError();
-    }
-    if (!res.ok) {
-        const text = await res.text();
-        throw new Error(`deleteBattleById failed: ${res.status} ${res.statusText} - ${text}`);
-    }
-}
-
-export async function createBattle(battle: CreateBattle, accessToken: string): Promise<Battle> {
-    const res = await fetch(`${config.API_URL}/v1/battle`, {
-        method: "POST",
-        headers: {
-            "Authorization": accessToken,
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify(battle)
-    });
-    if (res.status === 401) {
-        throw new UnauthorizedError();
-    }
-    if (!res.ok) {
-        const text = await res.text();
-        throw new Error(`createBattle failed: ${res.status} ${res.statusText} - ${text}`);
-    }
-    return res.json();
-}
+export {
+    getAllBattles,
+    getBattleHits,
+    getBattleStatus,
+    getBitcoinBlockHeight,
+} from "@/clients/referee";
 
 async function authFetch(input: RequestInfo, init?: RequestInit) {
     let res = await fetch(input, {
@@ -92,13 +47,49 @@ export async function logOut() {
     })
 }
 
-export async function getUserBets(): Promise<UserBetListItem[]> {
+export async function getUserBetsOverview(): Promise<UserBetsOverview> {
     const res = await authFetch(`${config.BASE_URL}/api/bets`);
-    if (!res.ok) throw new UnauthorizedError();
+    if (res.status === 401) throw new UnauthorizedError();
+    if (!res.ok) {
+        throw new Error(`Unable to fetch user bets: ${res.status}`);
+    }
     return res.json();
 }
 
+export async function getBattleBetsView(battleId: string, signal?: AbortSignal): Promise<BattleBetsView> {
+    const res = await fetch(`${config.BASE_URL}/api/battles/${encodeURIComponent(battleId)}/bets`, {signal});
+    if (!res.ok) {
+        throw new Error(`Unable to fetch battle bets: ${res.status}`);
+    }
+    return res.json();
+}
 
-export async function getBitcoinBlockHeight(): Promise<number> {
-    return fetch(`${config.BITCOIN_API_URL}/v1/bitcoin-block-height`).then(res => res.text()).then(Number.parseInt)
+export async function getClaimable(): Promise<number> {
+    const res = await authFetch(`${config.BASE_URL}/api/coins/claimable`);
+    if (res.status === 401) throw new UnauthorizedError();
+    if (!res.ok) {
+        throw new Error(`Unable to fetch claimable coins: ${res.status}`);
+    }
+    return res.json();
+}
+
+export async function claimCoins(captchaToken: string): Promise<void> {
+    const res = await authFetch(`${config.BASE_URL}/api/coins/claim`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({captchaToken}),
+    });
+    if (res.status === 401) throw new UnauthorizedError();
+    if (!res.ok) {
+        throw new Error(`Unable to claim coins: ${res.status}`);
+    }
+}
+
+export async function getBalance(): Promise<number> {
+    const res = await authFetch(`${config.BASE_URL}/api/coins/balance`);
+    if (res.status === 401) throw new UnauthorizedError();
+    if (!res.ok) {
+        throw new Error(`Unable to fetch balance: ${res.status}`);
+    }
+    return await res.json();
 }

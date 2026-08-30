@@ -20,10 +20,28 @@ enum ResultStatus {
   cancelled
 }
 
+/// pending: pari créé, débit escrow pas encore confirmé.
+/// confirmed: débit escrow réussi, le pari compte pour le settlement.
+/// void: débit escrow refusé (solde insuffisant) ou pari devenu invalide avant confirmation.
 enum BetStatus {
   pending
-  settled
-  canceled
+  confirmed
+  void
+}
+
+/// direction d'une écriture payout_outbox : qui paie qui.
+enum PayoutDirection {
+  debit_to_escrow
+  escrow_to_winner
+  escrow_to_refund
+}
+
+/// cycle de vie d'une ligne payout_outbox, piloté par le dispatcher (instrumentation.ts).
+enum PayoutStatus {
+  pending
+  dispatched
+  failed
+  dead
 }
 
 model Bet {
@@ -52,4 +70,67 @@ model BetOnBestShare {
   diff  BigInt
 
   bet Bet @relation(fields: [betId], references: [id])
+}
+
+/// Fige le règlement d'une bataille. La PRIMARY KEY sur battleId EST le
+/// mécanisme d'exactly-once : un deuxième settlement se casse dessus et
+/// rollback, il n'y a aucun flag applicatif à vérifier ailleurs.
+model BattleSettlement {
+  battleId  String   @id
+  settledAt DateTime @default(now())
+  /// Total du pot réparti, en plus petite unité de la devise (cohérent avec Bet.amount).
+  potTotal  BigInt
+  /// Calcul figé (paris retenus, cotes, montants par gagnant) : audit et débogage,
+  /// jamais relu pour recalculer — le settlement ne s'exécute qu'une fois.
+  breakdown Json
+
+  @@map("battle_settlement")
+}
+
+/// Prend la place d'une bataille annulée (hors périmètre pour l'instant : le
+/// schéma le permet déjà, aucune migration à refaire le jour où c'est implémenté).
+model BattleRefund {
+  battleId   String   @id
+  refundedAt DateTime @default(now())
+  breakdown  Json
+
+  @@map("battle_refund")
+}
+
+/// Ferme les paris pour une bataille, écrit par settleBattle dans la même
+/// transaction que BattleSettlement. hash-contenders ne possède pas de table
+/// Battle (le référee Python en reste seul propriétaire) : cette table est le
+/// pendant local, côté `bets`, de la clôture d'une bataille aux nouveaux paris.
+model BattleClosure {
+  battleId String   @id
+  closedAt DateTime @default(now())
+}
+
+/// Implémente le pattern transactional outbox : toute écriture qui doit
+/// traverser la frontière réseau vers wallet-service est d'abord posée ici,
+/// dans la même transaction Postgres que le changement d'état métier (bet
+/// créé, battle_settlement inséré...). Le dispatcher (instrumentation.ts) ne
+/// fait que lire cette table et rejouer les lignes 'pending' — jamais
+/// d'appel réseau pendant la transaction qui écrit une ligne.
+///
+/// idempotencyKey est déterministe et calculé DANS la même transaction que le
+/// reste de la ligne (formats : bet:{battleId}:{betId}, settle:{battleId}:{userId},
+/// refund:{battleId}:{userId}) — jamais un UUID généré au moment du dispatch :
+/// un crash entre "le wallet a traité" et "la ligne est marquée dispatched"
+/// donnerait une nouvelle clé au retry, et le wallet créditerait une seconde
+/// fois en toute légitimité puisque la clé serait inédite pour lui.
+model PayoutOutbox {
+  id              BigInt          @id @default(autoincrement())
+  battleId        String
+  userId          BigInt
+  amount          BigInt
+  direction       PayoutDirection
+  idempotencyKey  String          @unique
+  status          PayoutStatus    @default(pending)
+  attempts        Int             @default(0)
+  nextAttemptAt   DateTime        @default(now())
+  lastError       String?
+
+  @@index([status, nextAttemptAt])
+  @@map("payout_outbox")
 }

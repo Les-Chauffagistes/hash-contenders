@@ -8,8 +8,10 @@
  */
 
 import UnitConverter, { UNIT_VALUE_REGEX } from "@/lib/UnitConverter";
+import type {BetTypeId} from "@/contracts/bets";
+import {BEST_SHARE_TICKET_PRICE} from "@/contracts/bets";
 
-export type BetTypeId = "betOnWinner" | "betOnBestShare";
+export type {BetTypeId} from "@/contracts/bets";
 
 /** Champs métier extraits du formulaire, ou erreurs par champ à réafficher. */
 export type ParsedBetFields = {
@@ -27,6 +29,11 @@ export type BetTypeDefinition = {
      * alimentent l'objet `bet` envoyé au service, qui les revalide via Zod.
      */
     parseFields: (formData: FormData) => ParsedBetFields;
+    /**
+     * Prix fixe du ticket, si ce type de pari n'a plus de mise libre. Le
+     * formulaire verrouille alors le champ montant à cette valeur.
+     */
+    fixedAmount?: number;
 };
 
 export const BET_TYPES: readonly BetTypeDefinition[] = [
@@ -44,6 +51,7 @@ export const BET_TYPES: readonly BetTypeDefinition[] = [
         id: "betOnBestShare",
         name: "Meilleur share",
         description: "Misez sur la difficulté du meilleur share qui sera trouvé pendant la bataille.",
+        fixedAmount: BEST_SHARE_TICKET_PRICE,
         parseFields: (formData) => {
             const diff = formData.get("diff")?.toString().trim() ?? "";
             if (!UNIT_VALUE_REGEX.test(diff)) {
