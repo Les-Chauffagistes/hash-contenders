@@ -16,6 +16,7 @@ import {
     InvalidBetTypeError
 } from "@/services/bets/errors";
 import { betOnBestShareHandler } from "@/services/bets/betOnBestShare";
+import {runWithTraceId} from "@chauffagistes/cmn";
 
 /**
  * Types de paris acceptés. Ajouter un type = un fichier exportant un handler et
@@ -30,7 +31,17 @@ const HANDLERS: Record<string, BetHandler> = {
  * Déroulé commun à tous les paris. Le handler du type concerné n'intervient que
  * pour valider son payload, ses règles propres, et écrire sa table spécialisée.
  */
-export async function submitBet(db: PrismaClient, data: z.infer<typeof CreateBetSchema>, access_token: string) {
+export async function submitBet(db: PrismaClient, data: z.infer<typeof CreateBetSchema>, access_token: string, traceId?: string) {
+    // Prisma perd le contexte AsyncLocalStorage entre deux appels séparés par une
+    // requête DB (bug connu : https://github.com/prisma/prisma/issues/25984) — le
+    // burn, après le $transaction ci-dessous, se retrouvait avec un trace_id
+    // différent de celui du check de solde. On capture le trace_id résolu par
+    // withRequestLogging (passé en paramètre par la route) avant la transaction et
+    // on le réinjecte explicitement autour de chaque appel sortant, plutôt que de
+    // compter sur la survie du contexte ambiant à travers Prisma.
+    const withTrace = <T>(fn: () => Promise<T>): Promise<T> => traceId ? runWithTraceId(traceId, fn) : fn();
+
+
     const handler = HANDLERS[data.bet.type];
     if (!handler) throw new InvalidBetTypeError();
 
@@ -63,7 +74,7 @@ export async function submitBet(db: PrismaClient, data: z.infer<typeof CreateBet
 
     await handler.checkPreconditions(parsed.data, ctx);
 
-    const {balance} = await getUserCoins(access_token, CURRENCY);
+    const {balance} = await withTrace(() => getUserCoins(access_token, CURRENCY));
     if (balance < data.amount) throw new InsufficientBalanceError();
 
     let storedBetId: string;
@@ -94,7 +105,7 @@ export async function submitBet(db: PrismaClient, data: z.infer<typeof CreateBet
     }
 
     try {
-        await burnUserCoins(access_token, CURRENCY, data.amount, storedBetId!, JSON.stringify(data));
+        await withTrace(() => burnUserCoins(access_token, CURRENCY, data.amount, storedBetId!, JSON.stringify(data)));
     } catch {
         // Le débit a échoué : le pari ne doit pas rester actif.
         await db.bet.update({

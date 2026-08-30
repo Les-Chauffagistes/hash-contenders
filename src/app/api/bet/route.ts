@@ -13,10 +13,16 @@ import {extractUserAccessToken} from "../lib/auth";
 import {prisma} from "@/server/db";
 import {NextResponse} from "next/server";
 import {logger} from "@/lib/logger";
-import {withRequestLogging} from "@chauffagistes/cmn";
+import {withRequestLogging, resolveTraceId} from "@chauffagistes/cmn";
 
 
 export const POST = withRequestLogging(async (request: Request) => {
+    // Résolu une seconde fois ici (withRequestLogging l'a déjà fait pour poser le
+    // contexte ambiant) : resolveTraceId est pure et déterministe sur les mêmes
+    // headers, donc on retombe sur la même valeur. On la passe explicitement à
+    // submitBet pour survivre à la perte de contexte Prisma en aval (voir
+    // create.ts).
+    const traceId = resolveTraceId(request.headers);
     const access_token = await extractUserAccessToken();
 
     const json = await request.json();
@@ -26,7 +32,7 @@ export const POST = withRequestLogging(async (request: Request) => {
     }
 
     try {
-        await submitBet(prisma, bet.data, access_token);
+        await submitBet(prisma, bet.data, access_token, traceId);
     } catch (e) {
         if (e instanceof BattleNotFoundError) return NextResponse.json({error: "Bataille introuvable"}, {status: 404});
         if (e instanceof BattleFinishedError) return NextResponse.json({error: "La bataille est déjà terminée"}, {status: 409});
