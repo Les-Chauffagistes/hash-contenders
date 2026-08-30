@@ -2,7 +2,7 @@ import {Battle} from "../../models/Battle";
 import {BattleStatus} from "../../models/BattleStatus";
 import {CreateBattle} from "../../models/CreateBattle";
 import {Round} from "../../models/Hit";
-import {components} from "@les-chauffagistes/authentication-types"
+import {User} from "../../models/User"
 import {UnauthorizedError} from "@/app/api/lib/exceptions";
 import {UserBetListItem} from "@/app/bets/types";
 import {config} from "@/lib/config";
@@ -74,7 +74,7 @@ async function authFetch(input: RequestInfo, init?: RequestInit) {
     return res;
 }
 
-export async function getMe(): Promise<components["schemas"]["User"] | null> {
+export async function getMe(): Promise<User | null> {
     const res = await authFetch(`${config.AUTH_API_URL}/me`);
     if (!res.ok) return null;
     return res.json();

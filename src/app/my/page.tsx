@@ -1,13 +1,13 @@
 "use client";
 
-import { components } from "@les-chauffagistes/authentication-types";
+import { User } from "../../../models/User";
 import { useEffect, useState } from "react";
 import { getMe, logOut } from "../api";
 import {config} from "@/lib/config";
 
 
 export default function MyPage() {
-    const [user, setUser] = useState<components["schemas"]["User"] | null | undefined>(undefined);
+    const [user, setUser] = useState<User | null | undefined>(undefined);
 
     useEffect(() => {
         getMe().then(setUser);

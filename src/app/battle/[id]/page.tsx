@@ -12,13 +12,13 @@ import styles from "./page.module.css"
 import { Round } from "../../../../models/Hit";
 import { EllipsisVertical, HandFist, Trash2 } from "lucide-react";
 import {config} from "@/lib/config";
-import { components } from "@les-chauffagistes/authentication-types";
+import { User } from "../../../../models/User";
 import { deleteBattleAction } from "@/lib/actions/deleteBattle";
 
 
 export default function BatlePage() {
     const [battleStatus, setBattleStatus] = useState<BattleStatus | null>(null);
-    const [user, setUser] = useState<components["schemas"]["User"] | null>(null);
+    const [user, setUser] = useState<User | null>(null);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);

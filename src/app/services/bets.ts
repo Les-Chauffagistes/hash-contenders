@@ -1,10 +1,10 @@
-import { components } from "@les-chauffagistes/authentication-types";
+import { User } from "../../../models/User";
 import { PrismaClient } from "@/generated/prisma/client";
 import { Battle } from "../../../models/Battle";
 import { UserBetListItem } from "@/app/bets/types";
 import {config} from "@/lib/config";
 
-export async function getUserBets(db: PrismaClient, user: components["schemas"]["User"]) {
+export async function getUserBets(db: PrismaClient, user: User) {
     return db.bet.findMany({
         where: { userId: Number.parseInt(user.user_id) },
         orderBy: { createdAt: "desc" },

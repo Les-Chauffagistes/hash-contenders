@@ -4,7 +4,7 @@ import { useActionState, useEffect, useState } from "react";
 import { createBattleAction } from "@/lib/actions/createBattle";
 import { getBitcoinBlockHeight, getMe } from "@/app/api";
 import { config } from "@/lib/config";
-import { components } from "@les-chauffagistes/authentication-types";
+import { User } from "../../../models/User";
 import { LogIn } from "lucide-react";
 import styles from "./page.module.css";
 
@@ -12,7 +12,7 @@ import styles from "./page.module.css";
 export default function CreatePage() {
     const [state, action] = useActionState(createBattleAction, {});
     const [blockHeight, setBlockHeight] = useState<number | undefined>();
-    const [user, setUser] = useState<components["schemas"]["User"] | null | undefined>(undefined);
+    const [user, setUser] = useState<User | null | undefined>(undefined);
 
     useEffect(() => {
         getBitcoinBlockHeight().then(h => setBlockHeight(h + 2));

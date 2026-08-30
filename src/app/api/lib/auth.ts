@@ -1,4 +1,4 @@
-import {components} from "@les-chauffagistes/authentication-types";
+import {User} from "../../../../models/User";
 import {jwtVerify} from "jose"
 import {UnauthorizedError} from "@/app/api/lib/exceptions";
 import {cookies} from "next/headers";
@@ -7,7 +7,7 @@ import {logger} from "@/lib/logger";
 const SECRET = new TextEncoder().encode(process.env.JWT_SECRET)
 
 
-export async function decodeAccessToken(token: string): Promise<components["schemas"]["User"]> {
+export async function decodeAccessToken(token: string): Promise<User> {
     let decodedJwt;
     try {
         decodedJwt = await jwtVerify(token, SECRET, {
@@ -23,7 +23,7 @@ export async function decodeAccessToken(token: string): Promise<components["sche
         throw new Error("Invalid token type")
     }
 
-    return {user_id: payload.sub, pseudo: payload.pseudo!} as components["schemas"]["User"]
+    return {user_id: payload.sub, pseudo: payload.pseudo!} as User
 }
 
 /**
