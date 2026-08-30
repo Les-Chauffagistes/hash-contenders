@@ -1,6 +1,7 @@
 "use server";
 
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
+import { resolveTraceId, runWithTraceId } from "@chauffagistes/cmn";
 import { decodeAccessToken } from "@/app/api/lib/auth";
 import { UnauthorizedError } from "@/app/api/lib/exceptions";
 import { prisma } from "@/server/db";
@@ -32,6 +33,17 @@ export async function createBetAction(
     prevState: FormState,
     formData: FormData
 ): Promise<FormState> {
+    // Contrairement à /api/bet, une Server Action n'est jamais enveloppée par
+    // withRequestLogging (ça n'existe que pour les Route Handlers) : rien ne pose
+    // sinon le contexte de trace, et chaque appel sortant (getUserCoins,
+    // burnUserCoins) générait indépendamment son propre trace_id aléatoire.
+    // `headers()` donne accès aux en-têtes de la requête entrante même depuis une
+    // Server Action, d'où le traceparent posé par Traefik.
+    const traceId = resolveTraceId(await headers());
+    return runWithTraceId(traceId, () => submitCreateBet(formData, traceId));
+}
+
+async function submitCreateBet(formData: FormData, traceId: string): Promise<FormState> {
     const cookieStore = await cookies();
     const access_token = cookieStore.get("access_token")?.value;
     if (!access_token) return { errors: { _form: "Non authentifié" }, authExpired: true };
@@ -77,7 +89,7 @@ export async function createBetAction(
     }
 
     try {
-        await submitBet(prisma, parsed.data, access_token);
+        await submitBet(prisma, parsed.data, access_token, traceId);
     } catch (e) {
         // Levée par decodeAccessToken avant toute écriture : rejouable côté client.
         if (e instanceof UnauthorizedError) return { errors: { _form: "Session expirée" }, authExpired: true };
@@ -92,5 +104,6 @@ export async function createBetAction(
         return { errors: { _form: "Une erreur inattendue s'est produite, veuillez réessayer" } };
     }
 
+    logger.info("pari soumis", {battle_id: body.battle_id, amount: body.amount, bet_type: betType.id});
     return { success: true };
 }
