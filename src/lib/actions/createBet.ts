@@ -1,7 +1,7 @@
 "use server";
 
 import { cookies, headers } from "next/headers";
-import { resolveTraceId, runWithTraceId } from "@chauffagistes/cmn";
+import { extractTraceContext, withTraceContext, type Context } from "@chauffagistes/cmn";
 import { decodeAccessToken } from "@/server/auth";
 import { UnauthorizedError } from "@/lib/errors";
 import { prisma } from "@/server/db";
@@ -36,15 +36,16 @@ export async function createBetAction(
 ): Promise<FormState> {
     // Contrairement à /api/bet, une Server Action n'est jamais enveloppée par
     // withRequestLogging (ça n'existe que pour les Route Handlers) : rien ne pose
-    // sinon le contexte de trace, et chaque appel sortant (getUserCoins,
-    // burnUserCoins) générait indépendamment son propre trace_id aléatoire.
-    // `headers()` donne accès aux en-têtes de la requête entrante même depuis une
-    // Server Action, d'où le traceparent posé par Traefik.
-    const traceId = resolveTraceId(await headers());
-    return runWithTraceId(traceId, () => submitCreateBet(formData, traceId));
+    // de contexte de trace ambiant ici, donc il doit être extrait explicitement
+    // du `traceparent` entrant (posé par Traefik) puis réinjecté explicitement
+    // autour de chaque appel sortant qui suit — voir le commentaire dans
+    // services/bets/create.ts pour le pourquoi (pas de contexte à "laisser
+    // survivre", il n'y en a jamais eu).
+    const parentCtx = extractTraceContext(await headers());
+    return withTraceContext(parentCtx, () => submitCreateBet(formData, parentCtx));
 }
 
-async function submitCreateBet(formData: FormData, traceId: string): Promise<FormState> {
+async function submitCreateBet(formData: FormData, parentCtx: Context): Promise<FormState> {
     const cookieStore = await cookies();
     const access_token = cookieStore.get("access_token")?.value;
     if (!access_token) return { errors: { _form: "Non authentifié" }, authExpired: true };
@@ -90,7 +91,7 @@ async function submitCreateBet(formData: FormData, traceId: string): Promise<For
     }
 
     try {
-        await submitBet(prisma, parsed.data, access_token, traceId);
+        await submitBet(prisma, parsed.data, access_token, parentCtx);
     } catch (e) {
         // Levée par decodeAccessToken avant toute écriture : rejouable côté client.
         if (e instanceof UnauthorizedError) return { errors: { _form: "Session expirée" }, authExpired: true };

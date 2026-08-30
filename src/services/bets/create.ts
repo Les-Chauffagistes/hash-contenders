@@ -17,7 +17,7 @@ import {
 } from "@/services/bets/errors";
 import { escrowUserId } from "@/services/payouts/escrow";
 import { betDebitKey } from "@/services/payouts/idempotencyKeys";
-import {runWithTraceId} from "@chauffagistes/cmn";
+import {withTraceContext, type Context} from "@chauffagistes/cmn";
 
 /**
  * Déroulé commun à tous les paris. Le handler du type concerné n'intervient que
@@ -28,15 +28,14 @@ import {runWithTraceId} from "@chauffagistes/cmn";
  * l'appel au wallet a lieu après le COMMIT. C'est cette ligne, pas l'appel
  * réseau, qui rend un crash survivable — voir payout_outbox dans schema.prisma.
  */
-export async function submitBet(db: PrismaClient, data: z.infer<typeof CreateBetSchema>, access_token: string, traceId?: string) {
-    // Prisma perd le contexte AsyncLocalStorage entre deux appels séparés par une
-    // requête DB (bug connu : https://github.com/prisma/prisma/issues/25984) — le
-    // débit escrow, après le $transaction ci-dessous, se retrouvait avec un
-    // trace_id différent de celui du check de solde. On capture le trace_id résolu
-    // par withRequestLogging (passé en paramètre par la route) avant la transaction
-    // et on le réinjecte explicitement autour de chaque appel sortant, plutôt que
-    // de compter sur la survie du contexte ambiant à travers Prisma.
-    const withTrace = <T>(fn: () => Promise<T>): Promise<T> => traceId ? runWithTraceId(traceId, fn) : fn();
+export async function submitBet(db: PrismaClient, data: z.infer<typeof CreateBetSchema>, access_token: string, parentCtx?: Context) {
+    // Pas de contexte de trace ambiant à faire survivre ici : l'appelant Server
+    // Action (createBetAction) n'est enveloppé par aucun middleware équivalent à
+    // withRequestLogging, donc rien ne pose de span actif pour tout ce chemin.
+    // Le contexte extrait par l'appelant est passé explicitement en paramètre et
+    // réinjecté autour de chaque appel sortant, pas parce qu'un contexte ambiant
+    // se perdrait sinon.
+    const withTrace = <T>(fn: () => Promise<T>): Promise<T> => parentCtx ? withTraceContext(parentCtx, fn) : fn();
 
     const handler = getBetHandler(data.bet.type);
     if (!handler) throw new InvalidBetTypeError();

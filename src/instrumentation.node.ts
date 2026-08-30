@@ -5,8 +5,15 @@
  * dynamiquement, depuis la branche `NEXT_RUNTIME === "nodejs"`.
  */
 import {logger} from "@/lib/logger";
+import {setupTracing, shutdownTracing} from "@chauffagistes/cmn";
 
 export async function startBackgroundLoops() {
+  // handleShutdownSignal: false — ce fichier a déjà son propre handler SIGTERM
+  // ci-dessous pour drainer les boucles de fond ; shutdownTracing() y est
+  // appelé explicitement, dans la même séquence, plutôt que de laisser deux
+  // handlers SIGTERM indépendants se disputer l'ordre d'arrêt.
+  setupTracing({service: "hash-contenders", handleShutdownSignal: false});
+
   const {prisma} = await import("@/server/db");
   const {dispatchOutboxBatch} = await import("@/services/payouts/dispatch");
   const {sweepUnsettledBattles} = await import("@/services/settlement/sweep");
@@ -25,6 +32,7 @@ export async function startBackgroundLoops() {
   const shutdown = async () => {
     await Promise.all(loops.map((loop) => loop.stop()));
     await prisma.$disconnect();
+    await shutdownTracing();
   };
 
   // Le Swarm envoie SIGTERM à chaque redeploy : laisser le tick en cours se
