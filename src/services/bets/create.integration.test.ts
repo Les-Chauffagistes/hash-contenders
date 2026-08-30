@@ -345,7 +345,7 @@ describe("submitBet avec PostgreSQL", () => {
   });
 
   it("laisse le pari et l'outbox pending lorsque le wallet échoue pour une raison transitoire", async () => {
-    const idempotencyKey = "6f5f5e59-2f76-4f0a-9f38-6a1b0d0f7f19";
+    const idempotencyKey = "6f5f5e59-2f76-4f0a-9f38-6a1b0d0f7f19"; // gitleaks:allow
     vi.mocked(transferCoins).mockRejectedValueOnce(new Error("coins API unavailable"));
 
     await submitBet(

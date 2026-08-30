@@ -233,7 +233,7 @@ describe("submitBet", () => {
         {
           battle_id: 123,
           amount: 50,
-          idempotency_key: "3f2b9a8f-6a19-4e39-9b7b-5f0f6f6b6f9d",
+          idempotency_key: "3f2b9a8f-6a19-4e39-9b7b-5f0f6f6b6f9d", // gitleaks:allow
           bet: {type: "betOnWinner", winner_index: 1},
         },
         "access-token",
@@ -392,7 +392,7 @@ describe("submitBet", () => {
         {
           battle_id: 123,
           amount: 75,
-          idempotency_key: "24d95a37-9d3c-4a19-9d92-6f3c9a1d78a2",
+          idempotency_key: "24d95a37-9d3c-4a19-9d92-6f3c9a1d78a2", // gitleaks:allow
           bet: {type: "betOnBestShare", diff: "2.5K"},
         },
         "access-token",
@@ -412,7 +412,7 @@ describe("submitBet", () => {
         {
           battle_id: 123,
           amount: 50,
-          idempotency_key: "a2f9a8f2-6a19-4e39-9b7b-5f0f6f6b6f9d",
+          idempotency_key: "a2f9a8f2-6a19-4e39-9b7b-5f0f6f6b6f9d", // gitleaks:allow
           bet: {type: "betOnBestShare", diff: "2.5K"},
         },
         "access-token",
@@ -433,7 +433,7 @@ describe("submitBet", () => {
       {
         battle_id: 123,
         amount: 50,
-        idempotency_key: "d2b5e6a7-2f2f-4b8a-9d2c-6a2c1e9a9f0b",
+        idempotency_key: "d2b5e6a7-2f2f-4b8a-9d2c-6a2c1e9a9f0b", // gitleaks:allow
         bet: {type: "betOnBestShare", diff: "3K"},
       },
       "access-token",
@@ -538,7 +538,7 @@ describe("submitBet", () => {
       {
         battle_id: 123,
         amount: 50,
-        idempotency_key: "97fe4c30-5f60-40f0-9676-7dedcb4637dc",
+        idempotency_key: "97fe4c30-5f60-40f0-9676-7dedcb4637dc", // gitleaks:allow
         bet: {
           type: "betOnWinner",
           winner_index: 1,
