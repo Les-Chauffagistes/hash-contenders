@@ -1,6 +1,6 @@
 import {Prisma, PrismaClient} from "@/generated/prisma/client";
 import {CURRENCY} from "@/services/bets/baseBet";
-import {InsufficientCoinsError, transferCoins} from "@/clients/wallet";
+import {burnUserCoins, InsufficientCoinsError, transferCoins} from "@/clients/wallet";
 import {escrowUserId} from "@/services/payouts/escrow";
 import {parseBetDebitKey} from "@/services/payouts/idempotencyKeys";
 import {logger} from "@/lib/logger";
@@ -8,7 +8,7 @@ import {logger} from "@/lib/logger";
 const BATCH_SIZE = 50;
 const MAX_ATTEMPTS = 10;
 
-type PayoutDirection = "debit_to_escrow" | "escrow_to_winner" | "escrow_to_refund";
+type PayoutDirection = "debit_to_escrow" | "escrow_to_winner" | "escrow_to_refund" | "escrow_to_burn";
 
 type OutboxRow = {
   id: bigint;
@@ -24,6 +24,7 @@ const REASON: Record<PayoutDirection, string> = {
   debit_to_escrow: "Bet placed",
   escrow_to_winner: "Battle settlement payout",
   escrow_to_refund: "Battle settlement refund",
+  escrow_to_burn: "Battle settlement burn (no winner)",
 };
 
 function counterparties(row: OutboxRow): {fromUserId: number; toUserId: number} {
@@ -77,17 +78,30 @@ export async function dispatchOutboxBatch(db: PrismaClient): Promise<number> {
 }
 
 async function dispatchRow(tx: Prisma.TransactionClient, row: OutboxRow): Promise<void> {
-  const {fromUserId, toUserId} = counterparties(row);
-
   try {
-    await transferCoins({
-      fromUserId,
-      toUserId,
-      amount: Number(row.amount),
-      currency: CURRENCY,
-      idempotencyKey: row.idempotencyKey,
-      reason: REASON[row.direction],
-    });
+    if (row.direction === "escrow_to_burn") {
+      // Pas de contrepartie : `userId` porte déjà le compte escrow dont le
+      // solde doit être détruit (settleBattle l'a posé à escrowUserId).
+      await burnUserCoins({
+        params: {
+          userId: Number(row.userId),
+          amount: Number(row.amount),
+          currency: CURRENCY,
+          idempotencyKey: row.idempotencyKey,
+          reason: REASON[row.direction],
+        },
+      });
+    } else {
+      const {fromUserId, toUserId} = counterparties(row);
+      await transferCoins({
+        fromUserId,
+        toUserId,
+        amount: Number(row.amount),
+        currency: CURRENCY,
+        idempotencyKey: row.idempotencyKey,
+        reason: REASON[row.direction],
+      });
+    }
   } catch (e) {
     if (e instanceof InsufficientCoinsError) {
       await markDefinitiveFailure(tx, row);
@@ -137,9 +151,9 @@ async function markDefinitiveFailure(tx: Prisma.TransactionClient, row: OutboxRo
     return;
   }
 
-  // Un escrow_to_winner/refund refusé pour solde insuffisant signifie que
-  // l'escrow de la bataille n'a pas ce qu'il devrait avoir : ce n'est pas un
-  // cas attendu, la réconciliation (Phase 6) est censée l'avoir détecté avant.
+  // Un escrow_to_winner/refund/burn refusé pour solde insuffisant signifie
+  // que l'escrow de la bataille n'a pas ce qu'il devrait avoir : ce n'est pas
+  // un cas attendu, la réconciliation (Phase 6) est censée l'avoir détecté avant.
   logger.error(`[payoutOutbox] solde escrow insuffisant pour la ligne ${row.id} (${row.direction})`, row);
 }
 

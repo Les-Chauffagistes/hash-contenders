@@ -15,6 +15,7 @@ vi.mock("@/clients/referee", () => ({
 
 import {getBattleStatus} from "@/clients/referee";
 import {settleBattle} from "@/services/settlement/settleBattle";
+import {escrowUserId} from "@/services/payouts/escrow";
 
 const execFileAsync = promisify(execFile);
 
@@ -295,6 +296,14 @@ describe("settleBattle", () => {
     const settlement = await db.battleSettlement.findUnique({where: {battleId: "13"}});
     const breakdown = settlement?.breakdown as Record<string, {burned?: number}>;
     expect(breakdown.betOnBestShare.burned).toBe(20);
+
+    // La part brûlée doit être dispatchée vers le wallet (route burn dédiée),
+    // pas laissée en escrow sans ligne outbox — sinon la réconciliation la
+    // signale indéfiniment comme une dérive.
+    const burns = await db.payoutOutbox.findMany({where: {battleId: "13", direction: "escrow_to_burn"}});
+    expect(burns).toHaveLength(1);
+    expect(Number(burns[0].amount)).toBe(20);
+    expect(burns[0].userId).toBe(BigInt(escrowUserId("13")));
 
     const bets = await db.bet.findMany({where: {battleId: "13"}});
     expect(bets.every((b) => b.result === "cancelled")).toBe(true);

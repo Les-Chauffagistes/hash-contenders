@@ -34,6 +34,7 @@ enum PayoutDirection {
   debit_to_escrow
   escrow_to_winner
   escrow_to_refund
+  escrow_to_burn
 }
 
 /// cycle de vie d'une ligne payout_outbox, piloté par le dispatcher (instrumentation.ts).
