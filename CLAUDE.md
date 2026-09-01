@@ -24,7 +24,7 @@ Next.js 16 app (App Router) with React 19 and TypeScript strict mode. All pages 
 
 ### Key architectural decisions:
 - **No local database** — the app consumes an external REST API (`src/app/api.ts`) and receives real-time updates via WebSocket
-- **Server Actions** for mutations only (`lib/actions/createBattle.ts`) with server-side validation
+- **Server Actions** for mutations only (`src/lib/actions/createBattle.ts`) with server-side validation
 - **WebSocket** via `next-ws` for live battle state (best share updates, round updates, hit results)
 - **CSS Modules** + CSS custom properties for styling, with dark mode via `prefers-color-scheme`
 - **French localization** — UI text, number formatting (`Intl.NumberFormat` with `fr-FR`), HTML lang attribute

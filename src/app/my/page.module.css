@@ -1,0 +1,41 @@
+.my {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    align-items: center;
+    padding: 40px 20px;
+    width: 100%;
+}
+
+.my span {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-radius: 28px;
+    border: 1px solid var(--border-color);
+    padding: 10px;
+    width: fit-content;
+}
+
+.header {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+}
+
+.header h1 {
+    grid-column: 2;
+    justify-self: center;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.header span {
+    grid-column: 3;
+    justify-self: end;
+}

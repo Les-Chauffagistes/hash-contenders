@@ -2,17 +2,28 @@
   display: flex;
   flex: 1;
   flex-direction: column;
+  min-height: 0;
 
   max-width: 520px;
   margin: 40px auto;
   padding: 0 20px;
   width: 100%;
+  overflow: hidden;
 }
 
 .page .main {
   display: flex;
   flex-direction: column;
   gap: 24px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  /* Marge pour laisser respirer l'agrandissement (scale) et l'ombre au survol
+     des cartes sans qu'ils soient rognés par le scroll ou le conteneur
+     parent. Les marges négatives puisent dans le padding de 20px de .page,
+     qui reste donc à l'abri de l'overflow: hidden ambiant. */
+  padding: 10px 14px;
+  margin: -10px -14px 0;
 }
 
 .toolbar {
@@ -20,6 +31,7 @@
   align-items: center;
   gap: 12px;
   margin-bottom: 20px;
+  flex-shrink: 0;
 }
 
 .searchWrapper {
@@ -62,94 +74,17 @@
   padding: 40px 0;
 }
 
-/* Backdrop */
-.backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 49;
-}
+@media (max-width: 768px) {
+  .page {
+    margin: 20px auto;
+    padding: 0 16px;
+  }
 
-/* Drawer */
-.drawer {
-  position: fixed;
-  top: 0;
-  right: 0;
-  height: 100vh;
-  width: 300px;
-  background: var(--bg-soft);
-  border-left: 1px solid var(--border-color);
-  padding: 32px 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-  transform: translateX(100%);
-  transition: transform 0.25s ease;
-  z-index: 50;
-}
+  .toolbar {
+    flex-wrap: wrap;
+  }
 
-.drawerOpen {
-  transform: translateX(0);
-}
-
-.drawerHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.drawerTitle {
-  font-size: 16px;
-  font-weight: 700;
-}
-
-.drawerClose {
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: var(--text-muted);
-  display: flex;
-  align-items: center;
-  padding: 4px;
-  border-radius: 4px;
-  transition: color 0.15s;
-}
-
-.drawerClose:hover {
-  color: var(--text-main);
-}
-
-.drawerBattle {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.drawerContender {
-  font-size: 15px;
-  font-weight: 700;
-}
-
-.drawerVs {
-  font-size: 12px;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.drawerButton {
-  display: block;
-  margin-top: auto;
-  padding: 10px 20px;
-  border-radius: 7px;
-  background-color: var(--accent);
-  color: white;
-  font-size: 14px;
-  font-weight: 600;
-  text-align: center;
-  text-decoration: none;
-  transition: background-color 0.2s;
-}
-
-.drawerButton:hover {
-  background-color: var(--accent-soft);
+  .searchWrapper {
+    flex-basis: 100%;
+  }
 }

@@ -8,7 +8,7 @@ import styles from "./BattleCard.module.css";
 
 type Props = {
     battle: Battle;
-    onBet?: (e: React.MouseEvent) => void;
+    onBet?: () => void;
 };
 
 export default function BattleCard({ battle, onBet }: Readonly<Props>) {
@@ -65,7 +65,7 @@ export default function BattleCard({ battle, onBet }: Readonly<Props>) {
                         onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
-                            onBet(e);
+                            onBet();
                         }}
                     >
                         Parier

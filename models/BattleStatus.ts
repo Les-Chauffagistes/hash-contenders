@@ -1,6 +1,7 @@
 import { Round } from "./Hit";
 
 export type BattleStatus = {
+    owner_user_id: number
     battle_id: number
     rounds: number
     contenders_base_pv: number

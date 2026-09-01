@@ -1,5 +1,6 @@
 import { type NextRequest } from 'next/server'
 import { NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 
 
 // app/api/ws/route.ts
@@ -13,7 +14,7 @@ export async function UPGRADE(
   server: import('ws').WebSocketServer,
   request: NextRequest
 ) {
-  console.log('A client connected');
+  logger.info('A client connected');
 
   client.on("message", (msg) => {
     try {

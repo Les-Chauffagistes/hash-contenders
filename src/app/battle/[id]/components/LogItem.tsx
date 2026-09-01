@@ -1,7 +1,7 @@
 import { HandFist } from "lucide-react";
 import { Round } from "../../../../../models/Hit";
 import styles from "./logitem.module.css"
-import UnitConverter from "../../../../../lib/UnitConverter";
+import UnitConverter from "../../../../lib/UnitConverter";
 
 
 export default function LogItem({ hit }: { hit: Round }) {

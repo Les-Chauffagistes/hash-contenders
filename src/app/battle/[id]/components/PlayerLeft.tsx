@@ -1,5 +1,6 @@
-import UnitConverter from "../../../../../lib/UnitConverter"
+import UnitConverter from "../../../../lib/UnitConverter"
 import Battery from "./Battery"
+import styles from "./player.module.css"
 
 export type PlayerLeftProps = {
     name: string
@@ -11,17 +12,17 @@ export type PlayerLeftProps = {
 
 export default function PlayerLeft({ name, pv, pvMax, alignment, bestDiff }: PlayerLeftProps) {
     return (
-        <div style={{ display: "flex", flexDirection: "column", width: "100%" }}>
-            <h1 style={{marginBottom: 40}}>{name}</h1>
-            <table>
+        <div className={styles.player}>
+            <h1 className={styles.name}>{name}</h1>
+            <table className={styles.table}>
                 <tbody>
                     <tr>
-                        <td style={{ width: 1 }}><Battery percent={pv / pvMax} alignment={alignment} /></td>
-                        <td><h2 style={{marginLeft: 50}}>{UnitConverter.fromNumberToString(bestDiff ?? 0)}</h2></td>
+                        <td className={styles.diffCellStart}><Battery percent={pv / pvMax} alignment={alignment} /></td>
+                        <td><h2 className={styles.diffValue}>{UnitConverter.fromNumberToString(bestDiff ?? 0)}</h2></td>
                     </tr>
                     <tr>
                         <td>
-                            <p style={{ textAlign: "center", marginTop: 20, width: "100%" }}>{Math.round((pv/pvMax) * 100)}%</p>
+                            <p className={styles.percent}>{Math.round((pv/pvMax) * 100)}%</p>
                         </td>
                         <td></td>
                     </tr>

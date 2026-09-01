@@ -2,6 +2,8 @@ import type {Metadata} from "next";
 
 import "./globals.css";
 import DesktopNavbar from "./components/DesktopNavbar";
+import styles from "./layout.module.css";
+import React from "react";
 
 
 export const metadata: Metadata = {
@@ -17,13 +19,9 @@ export default function RootLayout({children,}: Readonly<{ children: React.React
             <script src="/config.js"/>
         </head>
         <body>
-        <div style={{
-            display: "flex",
-            height: "100dvh",
-            overflow: "hidden"
-        }}>
+        <div className={styles.shell}>
             <DesktopNavbar/>
-            <div style={{flex: 1, minWidth: 0, overflow: "hidden", display: "flex", flexDirection: "column"}}>
+            <div className={styles.content}>
                 {children}
             </div>
         </div>

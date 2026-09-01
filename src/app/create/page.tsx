@@ -1,21 +1,53 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
-import { createBattleAction } from "../../../lib/actions/createBattle";
-import { getBitcoinBlockHeight } from "@/app/api";
+import { createBattleAction } from "@/lib/actions/createBattle";
+import { getBitcoinBlockHeight, getMe } from "@/app/api";
+import { config } from "@/lib/config";
+import { User } from "../../../models/User";
+import { LogIn } from "lucide-react";
 import styles from "./page.module.css";
 
 
 export default function CreatePage() {
     const [state, action] = useActionState(createBattleAction, {});
     const [blockHeight, setBlockHeight] = useState<number | undefined>();
+    const [user, setUser] = useState<User | null | undefined>(undefined);
 
     useEffect(() => {
         getBitcoinBlockHeight().then(h => setBlockHeight(h + 2));
+        getMe()
+            .then(setUser)
+            .catch(error => {
+                console.error("Impossible de vérifier la connexion", error);
+                setUser(null);
+            });
     }, []);
+
+    const loginUrl = user === null
+        ? `${config.AUTH_URL}/login?redirect=${encodeURIComponent(globalThis.location.href)}`
+        : "";
+
     return (
         <form action={action} className={styles.create}>
             <h1 className={styles.title}>Nouvelle bataille</h1>
+
+            {user === null && (
+                <div className={styles.authNotice} role="alert">
+                    <LogIn aria-hidden="true" size={20} />
+                    <div>
+                        <p className={styles.authNoticeTitle}>Connexion requise</p>
+                        <p>
+                            Vous devez être connecté pour créer une bataille.
+                        </p>
+                        <a href={loginUrl} className={styles.loginLink}>Se connecter</a>
+                    </div>
+                </div>
+            )}
+
+            {state?.errors?._form && (
+                <p className={styles.formError} role="alert">{state.errors._form}</p>
+            )}
 
             <label className={styles.checkboxField}>
                 <input type="checkbox" name="are_addresses_privates" />

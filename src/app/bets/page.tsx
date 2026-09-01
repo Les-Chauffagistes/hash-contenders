@@ -2,25 +2,43 @@
 
 import styles from "./page.module.css";
 import {useEffect, useState} from "react";
-import {getUserBets} from "@/app/api";
-import BetCard from "@/app/bets/components/betCard";
-import {UserBetListItem} from "@/app/bets/types";
+import {getUserBetsOverview} from "@/app/api";
+import BattleBetGroup from "@/app/bets/components/battleBetGroup";
+import {isBattleAwaitingOutcome} from "@/app/bets/betPresentation";
+import type {UserBetsOverview} from "@/contracts/bets";
 
 export default function BetsPage() {
-    const [bets, setBets] = useState<UserBetListItem[] | null>(null)
+    const [overview, setOverview] = useState<UserBetsOverview | null>(null)
 
     useEffect(() => {
-        getUserBets().then(setBets)
+        getUserBetsOverview().then(setOverview)
     }, [])
+
+    const battles = overview?.battles ?? []
+    const awaitingOutcome = battles.filter(isBattleAwaitingOutcome)
+    const settled = battles.filter((battleBets) => !isBattleAwaitingOutcome(battleBets))
 
     return (
         <main className={styles.page}>
             <h1 className={styles.title}>Mes paris</h1>
-            {bets === null && <p className={styles.empty}>Récupération....</p>}
-            {bets?.length == 0 && <p>Aucun pari</p>}
-            {(bets !== null && bets?.length != 0) && <div>
-                {bets.map((bet) => <BetCard key={bet.id} bet={bet} />)}
-            </div>}
+            {overview === null && <p className={styles.empty}>Récupération....</p>}
+            {battles.length == 0 && overview !== null && <p>Aucun pari</p>}
+            {awaitingOutcome.length > 0 && (
+                <section className={styles.section}>
+                    <h2 className={styles.sectionTitle}>En cours</h2>
+                    {awaitingOutcome.map((battleBets) => (
+                        <BattleBetGroup key={battleBets.battleId} battleBets={battleBets} />
+                    ))}
+                </section>
+            )}
+            {settled.length > 0 && (
+                <section className={styles.section}>
+                    <h2 className={styles.sectionTitle}>Terminés</h2>
+                    {settled.map((battleBets) => (
+                        <BattleBetGroup key={battleBets.battleId} battleBets={battleBets} />
+                    ))}
+                </section>
+            )}
         </main>
     );
 }

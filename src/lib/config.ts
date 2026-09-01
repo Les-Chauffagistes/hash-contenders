@@ -28,5 +28,10 @@ export const config = {
         return typeof window !== "undefined"
             ? (window.__CONFIG__?.BITCOIN_API_URL ?? "")
             : (process.env.BITCOIN_API_URL ?? "");
+    },
+    get TURNSTILE_SITE_KEY() {
+        return typeof window !== "undefined"
+            ? (window.__CONFIG__?.TURNSTILE_SITE_KEY ?? "")
+            : (process.env.TURNSTILE_SITE_KEY ?? "");
     }
 };
