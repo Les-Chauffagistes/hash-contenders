@@ -35,6 +35,8 @@ export async function createBattleAction(
     const contender2Address = formData.get("contender_2_address");
     const contender1Name = formData.get("contender_1_name");
     const contender2Name = formData.get("contender_2_name");
+    const contender1Worker = formData.get("contender_1_worker");
+    const contender2Worker = formData.get("contender_2_worker");
     const contendersPv = formData.get("contenders_pv");
     const rounds = formData.get("rounds");
     const startHeight = formData.get("start_height");
@@ -65,8 +67,10 @@ export async function createBattleAction(
         are_addresses_privates: areAddressesPrivates === "on",
         contender_1_address: contender1Address,
         contender_1_name: contender1Name,
+        contender_1_worker: isNonEmptyString(contender1Worker) ? contender1Worker.trim() : undefined,
         contender_2_address: contender2Address,
         contender_2_name: contender2Name,
+        contender_2_worker: isNonEmptyString(contender2Worker) ? contender2Worker.trim() : undefined,
         contenders_pv: Number.parseInt(contendersPv),
         rounds: Number.parseInt(rounds),
         start_height: Number.parseInt(startHeight)

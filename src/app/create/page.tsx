@@ -70,6 +70,11 @@ export default function CreatePage() {
                         <p className={styles.errorLabel}>{state.errors.contender_1_name}</p>
                     )}
                 </div>
+                <div className={styles.field}>
+                    <label htmlFor="contender_1_worker">Mineur ciblé (optionnel)</label>
+                    <input type="text" id="contender_1_worker" name="contender_1_worker"
+                           placeholder="Laisser vide pour affronter toute la pool"/>
+                </div>
             </fieldset>
 
             <fieldset className={styles.fieldset}>
@@ -87,6 +92,11 @@ export default function CreatePage() {
                     {state?.errors?.contender_2_name && (
                         <p className={styles.errorLabel}>{state.errors.contender_2_name}</p>
                     )}
+                </div>
+                <div className={styles.field}>
+                    <label htmlFor="contender_2_worker">Mineur ciblé (optionnel)</label>
+                    <input type="text" id="contender_2_worker" name="contender_2_worker"
+                           placeholder="Laisser vide pour affronter toute la pool"/>
                 </div>
             </fieldset>
 

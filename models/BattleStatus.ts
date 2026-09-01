@@ -9,5 +9,5 @@ export type BattleStatus = {
     is_finished: boolean
     hits: Round[]
     current_round: number
-    contender_info: {address?: string, pv: number, name: string, current_round_best_diff: number}[]
+    contender_info: {address?: string, pv: number, name: string, worker?: string | null, current_round_best_diff: number}[]
 };
