@@ -10,7 +10,8 @@ export async function getUserCoins(access_token: string, currency: string): Prom
 }
 
 /** Rejet définitif par le wallet (solde insuffisant) : pas la peine de réessayer. */
-export class InsufficientCoinsError extends Error {}
+export class InsufficientCoinsError extends Error {
+}
 
 type TransferParams = {
     fromUserId: number;
@@ -75,4 +76,47 @@ export async function getSystemAccountBalance(userId: number, currency: string):
     if (!resp.ok) throw new Error(`Unexpected wallet response: ${resp.status}`);
     const {balance} = await resp.json();
     return balance;
+}
+
+
+type burnParams = {
+    userId: number,
+    currency: string,
+    amount: number,
+    reason: string,
+    idempotencyKey: string
+}
+
+/**
+ * Détruit définitivement des fonds sur un compte arbitraire (ici, le compte
+ * escrow d'une bataille) — service à service, comme `transferCoins`, sans
+ * JWT. Même distinction d'échec que `transferCoins` : solde insuffisant est
+ * définitif, tout le reste est transitoire et rejouable avec la même
+ * `idempotencyKey`.
+ */
+export async function burnUserCoins({params}: { params: burnParams }): Promise<void> {
+    let resp: Response;
+    try {
+        resp = await tracedFetch(`${process.env.COINS_API_URL}/v2/burn`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-Api-Key": process.env.COINS_API_KEY!,
+            },
+            body: JSON.stringify({
+                userId: params.userId,
+                currency: params.currency,
+                amount: params.amount,
+                reason: params.reason,
+                idempotencyKey: params.idempotencyKey,
+            }),
+            signal: AbortSignal.timeout(5_000),
+        });
+    } catch (e) {
+        throw new Error("Burn request failed", {cause: e});
+    }
+
+    if (resp.status === 204) return;
+    if (resp.status === 400) throw new InsufficientCoinsError();
+    throw new Error(`Unexpected wallet response: ${resp.status}`);
 }

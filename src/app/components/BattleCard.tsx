@@ -4,6 +4,8 @@ import { Battle } from "../../../models/Battle";
 import { BattleStatus } from "../../../models/BattleStatus";
 import { useEffect, useState } from "react";
 import { getBattleStatus } from "@/app/api";
+import { getBattleMode } from "@/lib/battleMode";
+import { UserRound, UsersRound } from "lucide-react";
 import styles from "./BattleCard.module.css";
 
 type Props = {
@@ -33,12 +35,22 @@ export default function BattleCard({ battle, onBet }: Readonly<Props>) {
         badgeLabel = "En cours";
     }
 
+    const battleMode = getBattleMode(battle.contender_1_worker, battle.contender_2_worker);
+    const modeLabel = battleMode === "miner" ? "Mineur vs Mineur" : "Pool vs Pool";
+
     return (
         <div className={styles.battlecard}>
             <div className={styles.header}>
-                <span className={`${styles.badge} ${badgeClass}`}>
-                    {badgeLabel}
-                </span>
+                <div className={styles.badges}>
+                    <span className={`${styles.badge} ${badgeClass}`}>
+                        {badgeLabel}
+                    </span>
+                    <span className={styles.modeIcon} title={modeLabel} aria-label={modeLabel}>
+                        {battleMode === "miner"
+                            ? <UserRound aria-hidden="true" size={16} />
+                            : <UsersRound aria-hidden="true" size={16} />}
+                    </span>
+                </div>
                 {hasStarted && (
                     <span className={styles.round}>
                         Round {status.current_round}/{battle.rounds}

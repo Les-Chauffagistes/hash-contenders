@@ -19,6 +19,11 @@ export function refundKey(battleId: number | string, userId: number | string | b
   return `refund:${battleId}:${userId}`;
 }
 
+/** Une clé par (bataille, type de pari) : le burn n'a pas de destinataire, un seul montant agrégé par type. */
+export function burnKey(battleId: number | string, betType: string): string {
+  return `burn:${battleId}:${betType}`;
+}
+
 /**
  * Extrait le betId d'une clé produite par betDebitKey. Le dispatcher en a
  * besoin pour répercuter le dispatch d'une ligne debit_to_escrow sur le

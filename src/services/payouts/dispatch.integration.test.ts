@@ -10,10 +10,11 @@ import {PrismaClient} from "@/generated/prisma/client";
 
 vi.mock("@/clients/wallet", () => ({
   transferCoins: vi.fn(),
+  burnUserCoins: vi.fn(),
   InsufficientCoinsError: class InsufficientCoinsError extends Error {},
 }));
 
-import {transferCoins, InsufficientCoinsError} from "@/clients/wallet";
+import {transferCoins, burnUserCoins, InsufficientCoinsError} from "@/clients/wallet";
 import {dispatchOutboxBatch} from "@/services/payouts/dispatch";
 
 const execFileAsync = promisify(execFile);
@@ -107,6 +108,36 @@ describe("dispatchOutboxBatch", () => {
       idempotencyKey: "settle:2:20",
       reason: "Battle settlement payout",
     });
+  });
+
+  it("brûle la part non remboursée via burnUserCoins, pas via un transfert", async () => {
+    vi.mocked(burnUserCoins).mockResolvedValue(undefined);
+    await db.payoutOutbox.create({
+      data: {
+        battleId: "8",
+        userId: -8,
+        amount: 20,
+        direction: "escrow_to_burn",
+        idempotencyKey: "burn:8:betOnBestShare",
+        nextAttemptAt: new Date(Date.now() - 1_000),
+      },
+    });
+
+    const processed = await dispatchOutboxBatch(db);
+
+    expect(processed).toBe(1);
+    expect(burnUserCoins).toHaveBeenCalledWith({
+      params: {
+        userId: -8,
+        amount: 20,
+        currency: "test-coins",
+        idempotencyKey: "burn:8:betOnBestShare",
+        reason: "Battle settlement burn (no winner)",
+      },
+    });
+    expect(transferCoins).not.toHaveBeenCalled();
+    const outbox = await db.payoutOutbox.findFirst({where: {battleId: "8"}});
+    expect(outbox?.status).toBe("dispatched");
   });
 
   it("passe le pari en void et l'outbox en failed sur un rejet définitif", async () => {

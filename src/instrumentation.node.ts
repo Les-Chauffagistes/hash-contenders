@@ -16,7 +16,7 @@ export async function startBackgroundLoops() {
 
   const {prisma} = await import("@/server/db");
   const {dispatchOutboxBatch} = await import("@/services/payouts/dispatch");
-  const {sweepUnsettledBattles} = await import("@/services/settlement/sweep");
+  const {sweepUnsettledBattles, sweepOrphanedBets} = await import("@/services/settlement/sweep");
   const {reconcileEscrowBalances} = await import("@/services/reconciliation/reconcileEscrow");
 
   const DISPATCH_INTERVAL_MS = 2_000;
@@ -26,6 +26,7 @@ export async function startBackgroundLoops() {
   const loops = [
     startLoop("payout dispatcher", DISPATCH_INTERVAL_MS, () => dispatchOutboxBatch(prisma)),
     startLoop("sweep", SWEEP_INTERVAL_MS, () => sweepUnsettledBattles(prisma)),
+    startLoop("sweep orphaned bets", SWEEP_INTERVAL_MS, () => sweepOrphanedBets(prisma)),
     startLoop("reconciliation", RECONCILIATION_INTERVAL_MS, () => reconcileEscrowBalances(prisma)),
   ];
 

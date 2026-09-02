@@ -10,10 +10,11 @@ import Log from "./components/Log";
 import { WebSocketEvent } from "../../../../models/WebSocketEvents";
 import styles from "./page.module.css"
 import { Round } from "../../../../models/Hit";
-import { Coins, EllipsisVertical, HandFist, ListFilter, Trash2 } from "lucide-react";
+import { Coins, EllipsisVertical, HandFist, ListFilter, Trash2, UserRound, UsersRound } from "lucide-react";
 import {config} from "@/lib/config";
 import { User } from "../../../../models/User";
 import { deleteBattleAction } from "@/lib/actions/deleteBattle";
+import { getBattleMode } from "@/lib/battleMode";
 
 
 export default function BatlePage() {
@@ -39,6 +40,11 @@ export default function BatlePage() {
         && user !== null
         && battleStatus.owner_user_id === Number(user.user_id);
     const canBet = battleStatus !== null && !battleStatus.is_finished;
+    const battleMode = getBattleMode(
+        battleStatus?.contender_info[0]?.worker,
+        battleStatus?.contender_info[1]?.worker,
+    );
+    const battleModeLabel = battleMode === "miner" ? "Mineur vs Mineur" : "Pool vs Pool";
 
     async function handleDeleteBattle() {
         const parsedBattleId = Number(battleId);
@@ -100,7 +106,7 @@ export default function BatlePage() {
                                 block_height: blockHeight,
                                 contender_1_best_diff: 0,
                                 contender_2_best_diff: 0,
-                                date: new Date(),
+                                finalized_at: null,
                                 battle_id: old.battle_id,
                                 winner: null
                             });
@@ -127,7 +133,7 @@ export default function BatlePage() {
                             block_height: blockHeight,
                             contender_1_best_diff: data.contender_1_best_diff,
                             contender_2_best_diff: data.contender_2_best_diff,
-                            date: new Date(data.date),
+                            finalized_at: new Date(data.date),
                             battle_id: old.battle_id,
                             winner: data.winner
                         });
@@ -166,7 +172,14 @@ export default function BatlePage() {
     return (
         <main className={styles.page}>
             <div className={styles.battleHeader}>
-                <span className={styles.battleLabel}>Bataille #{battleId}</span>
+                <div className={styles.battleLabelGroup}>
+                    <span className={styles.battleLabel}>Bataille #{battleId}</span>
+                    <span className={styles.modeIcon} title={battleModeLabel} aria-label={battleModeLabel}>
+                        {battleMode === "miner"
+                            ? <UserRound aria-hidden="true" size={16} />
+                            : <UsersRound aria-hidden="true" size={16} />}
+                    </span>
+                </div>
 
                 <div className={styles.actions}>
                     <button
@@ -244,6 +257,7 @@ export default function BatlePage() {
                             pv={battleStatus.contender_info[0].pv}
                             pvMax={battleStatus.contenders_base_pv}
                             bestDiff={battleStatus.contender_info[0].current_round_best_diff}
+                            worker={battleStatus.contender_info[0].worker}
                             alignment="start"
                         /> : <PlayerLeft name="Ça charge..." pv={0} pvMax={1} alignment="start" />}
                     </div>
@@ -265,6 +279,7 @@ export default function BatlePage() {
                             pv={battleStatus.contender_info[1].pv}
                             pvMax={battleStatus.contenders_base_pv}
                             bestDiff={battleStatus.contender_info[1].current_round_best_diff}
+                            worker={battleStatus.contender_info[1].worker}
                             alignment="end"
                         /> : <PlayerRight name="Ça charge..." pv={0} pvMax={1} alignment="end" />}
                     </div>

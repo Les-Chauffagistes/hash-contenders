@@ -24,6 +24,17 @@
   font-weight: 600;
 }
 
+.battleLabelGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.modeIcon {
+  display: inline-flex;
+  color: var(--text-muted);
+}
+
 .battleContent {
   display: flex;
   flex: 1;

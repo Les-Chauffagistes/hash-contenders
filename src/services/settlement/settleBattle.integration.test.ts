@@ -15,6 +15,7 @@ vi.mock("@/clients/referee", () => ({
 
 import {getBattleStatus} from "@/clients/referee";
 import {settleBattle} from "@/services/settlement/settleBattle";
+import {escrowUserId} from "@/services/payouts/escrow";
 
 const execFileAsync = promisify(execFile);
 
@@ -194,7 +195,7 @@ describe("settleBattle", () => {
       battleStatus({
         battle_id: 7,
         hits: [
-          {date: new Date(), battle_id: 7, contender_1_best_diff: 500, contender_2_best_diff: 100, block_height: 1, winner: null},
+          {finalized_at: new Date(), battle_id: 7, contender_1_best_diff: 500, contender_2_best_diff: 100, block_height: 1, winner: null},
         ],
       }),
     );
@@ -219,7 +220,7 @@ describe("settleBattle", () => {
       battleStatus({
         battle_id: 10,
         hits: [
-          {date: new Date(), battle_id: 10, contender_1_best_diff: 500, contender_2_best_diff: 100, block_height: 1, winner: null},
+          {finalized_at: new Date(), battle_id: 10, contender_1_best_diff: 500, contender_2_best_diff: 100, block_height: 1, winner: null},
         ],
       }),
     );
@@ -246,7 +247,7 @@ describe("settleBattle", () => {
       battleStatus({
         battle_id: 12,
         hits: [
-          {date: new Date(), battle_id: 12, contender_1_best_diff: 500, contender_2_best_diff: 100, block_height: 1, winner: null},
+          {finalized_at: new Date(), battle_id: 12, contender_1_best_diff: 500, contender_2_best_diff: 100, block_height: 1, winner: null},
         ],
       }),
     );
@@ -278,7 +279,7 @@ describe("settleBattle", () => {
       battleStatus({
         battle_id: 13,
         hits: [
-          {date: new Date(), battle_id: 13, contender_1_best_diff: 500, contender_2_best_diff: 100, block_height: 1, winner: null},
+          {finalized_at: new Date(), battle_id: 13, contender_1_best_diff: 500, contender_2_best_diff: 100, block_height: 1, winner: null},
         ],
       }),
     );
@@ -295,6 +296,14 @@ describe("settleBattle", () => {
     const settlement = await db.battleSettlement.findUnique({where: {battleId: "13"}});
     const breakdown = settlement?.breakdown as Record<string, {burned?: number}>;
     expect(breakdown.betOnBestShare.burned).toBe(20);
+
+    // La part brûlée doit être dispatchée vers le wallet (route burn dédiée),
+    // pas laissée en escrow sans ligne outbox — sinon la réconciliation la
+    // signale indéfiniment comme une dérive.
+    const burns = await db.payoutOutbox.findMany({where: {battleId: "13", direction: "escrow_to_burn"}});
+    expect(burns).toHaveLength(1);
+    expect(Number(burns[0].amount)).toBe(20);
+    expect(burns[0].userId).toBe(BigInt(escrowUserId("13")));
 
     const bets = await db.bet.findMany({where: {battleId: "13"}});
     expect(bets.every((b) => b.result === "cancelled")).toBe(true);
@@ -321,7 +330,7 @@ describe("settleBattle", () => {
       battleStatus({
         battle_id: 11,
         hits: [
-          {date: new Date(), battle_id: 11, contender_1_best_diff: 500, contender_2_best_diff: 100, block_height: 1, winner: null},
+          {finalized_at: new Date(), battle_id: 11, contender_1_best_diff: 500, contender_2_best_diff: 100, block_height: 1, winner: null},
         ],
       }),
     );

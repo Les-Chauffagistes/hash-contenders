@@ -8,12 +8,14 @@ export type PlayerLeftProps = {
     pvMax: number
     alignment: "start" | "end"
     bestDiff?: number
+    worker?: string | null
 }
 
-export default function PlayerLeft({ name, pv, pvMax, alignment, bestDiff }: PlayerLeftProps) {
+export default function PlayerLeft({ name, pv, pvMax, alignment, bestDiff, worker }: PlayerLeftProps) {
     return (
         <div className={styles.player}>
             <h1 className={styles.name}>{name}</h1>
+            {worker && <p className={styles.workerTag}>⛏ {worker}</p>}
             <table className={styles.table}>
                 <tbody>
                     <tr>
