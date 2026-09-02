@@ -5,6 +5,11 @@ import type {Round} from "../../models/Hit";
 import {UnauthorizedError} from "@/lib/errors";
 import {config} from "@/lib/config";
 
+/** L'API renvoie `finalized_at` en ISO 8601 (ou `null`) ; on le convertit en `Date` ici. */
+function parseRound(round: Omit<Round, "finalized_at"> & {finalized_at: string | null}): Round {
+  return {...round, finalized_at: round.finalized_at ? new Date(round.finalized_at) : null};
+}
+
 export async function getBattleStatus(
   battleId: number | string,
   includeHits: boolean = false,
@@ -15,7 +20,8 @@ export async function getBattleStatus(
   if (!response.ok) {
     throw new Error(`Unable to fetch battle status: ${response.status}`);
   }
-  return response.json();
+  const data = await response.json();
+  return {...data, hits: (data.hits ?? []).map(parseRound)};
 }
 
 export async function getBattleHits(battleId: number | string): Promise<Round[]> {
@@ -23,7 +29,8 @@ export async function getBattleHits(battleId: number | string): Promise<Round[]>
   if (!response.ok) {
     throw new Error(`Unable to fetch battle hits: ${response.status}`);
   }
-  return response.json();
+  const data = await response.json();
+  return data.map(parseRound);
 }
 
 export async function getAllBattles(): Promise<Battle[]> {

@@ -195,7 +195,7 @@ describe("settleBattle", () => {
       battleStatus({
         battle_id: 7,
         hits: [
-          {date: new Date(), battle_id: 7, contender_1_best_diff: 500, contender_2_best_diff: 100, block_height: 1, winner: null},
+          {finalized_at: new Date(), battle_id: 7, contender_1_best_diff: 500, contender_2_best_diff: 100, block_height: 1, winner: null},
         ],
       }),
     );
@@ -220,7 +220,7 @@ describe("settleBattle", () => {
       battleStatus({
         battle_id: 10,
         hits: [
-          {date: new Date(), battle_id: 10, contender_1_best_diff: 500, contender_2_best_diff: 100, block_height: 1, winner: null},
+          {finalized_at: new Date(), battle_id: 10, contender_1_best_diff: 500, contender_2_best_diff: 100, block_height: 1, winner: null},
         ],
       }),
     );
@@ -247,7 +247,7 @@ describe("settleBattle", () => {
       battleStatus({
         battle_id: 12,
         hits: [
-          {date: new Date(), battle_id: 12, contender_1_best_diff: 500, contender_2_best_diff: 100, block_height: 1, winner: null},
+          {finalized_at: new Date(), battle_id: 12, contender_1_best_diff: 500, contender_2_best_diff: 100, block_height: 1, winner: null},
         ],
       }),
     );
@@ -279,7 +279,7 @@ describe("settleBattle", () => {
       battleStatus({
         battle_id: 13,
         hits: [
-          {date: new Date(), battle_id: 13, contender_1_best_diff: 500, contender_2_best_diff: 100, block_height: 1, winner: null},
+          {finalized_at: new Date(), battle_id: 13, contender_1_best_diff: 500, contender_2_best_diff: 100, block_height: 1, winner: null},
         ],
       }),
     );
@@ -330,7 +330,7 @@ describe("settleBattle", () => {
       battleStatus({
         battle_id: 11,
         hits: [
-          {date: new Date(), battle_id: 11, contender_1_best_diff: 500, contender_2_best_diff: 100, block_height: 1, winner: null},
+          {finalized_at: new Date(), battle_id: 11, contender_1_best_diff: 500, contender_2_best_diff: 100, block_height: 1, winner: null},
         ],
       }),
     );

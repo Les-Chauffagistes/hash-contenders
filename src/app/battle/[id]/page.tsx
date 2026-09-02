@@ -106,7 +106,7 @@ export default function BatlePage() {
                                 block_height: blockHeight,
                                 contender_1_best_diff: 0,
                                 contender_2_best_diff: 0,
-                                date: new Date(),
+                                finalized_at: null,
                                 battle_id: old.battle_id,
                                 winner: null
                             });
@@ -133,7 +133,7 @@ export default function BatlePage() {
                             block_height: blockHeight,
                             contender_1_best_diff: data.contender_1_best_diff,
                             contender_2_best_diff: data.contender_2_best_diff,
-                            date: new Date(data.date),
+                            finalized_at: new Date(data.date),
                             battle_id: old.battle_id,
                             winner: data.winner
                         });

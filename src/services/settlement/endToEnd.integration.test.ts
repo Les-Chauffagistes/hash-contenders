@@ -210,7 +210,7 @@ describe("pipeline complet : pari -> escrow -> settlement -> payout", () => {
         battle_id: bestShareBattleId,
         is_finished: true,
         hits: [
-          {date: new Date(), battle_id: bestShareBattleId, contender_1_best_diff: 500, contender_2_best_diff: 100, block_height: 1, winner: null},
+          {finalized_at: new Date(), battle_id: bestShareBattleId, contender_1_best_diff: 500, contender_2_best_diff: 100, block_height: 1, winner: null},
         ],
       }),
     );

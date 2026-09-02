@@ -55,6 +55,18 @@
     text-align: center;
     font-variant-numeric: tabular-nums;
     flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+
+.settledAt {
+    font-size: 0.65rem;
+    font-weight: 400;
+    color: var(--text-muted);
+    opacity: 0.75;
+    white-space: nowrap;
 }
 
 /* Tug-of-war bar */

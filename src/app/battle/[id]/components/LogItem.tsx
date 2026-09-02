@@ -2,9 +2,10 @@ import { HandFist } from "lucide-react";
 import { Round } from "../../../../../models/Hit";
 import styles from "./logitem.module.css"
 import UnitConverter from "../../../../lib/UnitConverter";
+import formatTimeAgo from "../../../../lib/RelativeTimeFormatter";
 
 
-export default function LogItem({ hit }: { hit: Round }) {
+export default function LogItem({ hit, now }: { hit: Round; now?: Date }) {
     if (!hit) return null;
 
     const c1Wins = hit.winner === 1;
@@ -24,6 +25,9 @@ export default function LogItem({ hit }: { hit: Round }) {
 
                 <span className={styles.blockHeight}>
                     #{hit.block_height}
+                    {hit.finalized_at && (
+                        <span className={styles.settledAt}>{formatTimeAgo(hit.finalized_at, now)}</span>
+                    )}
                 </span>
 
                 <span className={`${styles.diff} ${styles.diffRight} ${c2Wins ? styles.diffWinner : ""}`}>
