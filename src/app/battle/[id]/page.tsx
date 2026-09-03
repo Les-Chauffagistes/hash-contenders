@@ -262,12 +262,15 @@ export default function BatlePage() {
                         /> : <PlayerLeft name="Ça charge..." pv={0} pvMax={1} alignment="start" />}
                     </div>
 
-                    <div className={styles.roundBadgeOuter}>
-                        <div className={styles.roundBadgeMid}>
-                            <div className={styles.roundBadgeRing}>
-                                <div className={styles.roundBadgeInner}>
-                                    <h1>{battleStatus?.current_round ?? 0}</h1>
-                                    <h2 className={styles.roundBadgeTotal}>/{battleStatus?.rounds ?? 0}</h2>
+                    <div className={styles.roundBadgeWrap}>
+                        <span className={styles.roundLabel}>Round</span>
+                        <div className={styles.roundBadgeOuter}>
+                            <div className={styles.roundBadgeMid}>
+                                <div className={styles.roundBadgeRing}>
+                                    <div className={styles.roundBadgeInner}>
+                                        <h1>{battleStatus?.current_round ?? 0}</h1>
+                                        <h2 className={styles.roundBadgeTotal}>/{battleStatus?.rounds ?? 0}</h2>
+                                    </div>
                                 </div>
                             </div>
                         </div>
