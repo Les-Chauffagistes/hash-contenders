@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { BattleStatus } from "../../../../models/BattleStatus";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { getBattleStatus, getMe } from "@/app/api";
 import PlayerLeft from "./components/PlayerLeft";
 import PlayerRight from "./components/PlayerRight";
@@ -15,6 +15,7 @@ import {config} from "@/lib/config";
 import { User } from "../../../../models/User";
 import { deleteBattleAction } from "@/lib/actions/deleteBattle";
 import { getBattleMode } from "@/lib/battleMode";
+import { nextReconnectDelayMs } from "@/lib/backoff";
 
 
 export default function BatlePage() {
@@ -67,95 +68,125 @@ export default function BatlePage() {
         }
     }
 
-    // Produit 2 ws en mode dev. Normal. N'en produit qu'un en build
-    useMemo(() => {
-        const ws = new WebSocket(`${config.WSS_URL}/v1/ws/${battleId}`);
-        ws.onmessage = (e) => {
-            const data: WebSocketEvent = JSON.parse(e.data);
-            switch (data.type) {
-                case "BEST_SHARE_UPDATE": {
-                    const blockHeight = Number.parseInt(data.block_height, 16);
-                    const contenderIndex = data.user === "contender_1" ? 0 : 1;
-                    const diffKey = data.user === "contender_1" ? "contender_1_best_diff" : "contender_2_best_diff";
-                    setBattleStatus(old => {
-                        if (!old) return old;
-                        const updatedHits = old.hits.map(hit =>
-                            hit.block_height === blockHeight ? {...hit, [diffKey]: data.diff} : hit
-                        );
-                        const isCurrentRound = old.hits.find(hit => hit.block_height === blockHeight)?.winner === null;
-                        const updatedContenderInfo = isCurrentRound
-                            ? old.contender_info.map((c, i) =>
-                                i === contenderIndex ? {...c, current_round_best_diff: data.diff} : c
-                            )
-                            : old.contender_info;
-                        return {...old, contender_info: updatedContenderInfo, hits: updatedHits};
-                    });
-                    break;
-                }
+    // Produit 2 ws en mode dev. Normal. N'en produit qu'une en build.
+    // Se reconnecte avec un backoff exponentiel (+jitter) tant que le composant
+    // reste monté : un déploiement stop-first coupe la connexion de tous les
+    // clients en train de suivre une bataille, sans ça ils restent bloqués
+    // jusqu'à un F5 manuel.
+    useEffect(() => {
+        let cancelled = false;
+        let socket: WebSocket | null = null;
+        let reconnectAttempts = 0;
+        let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
 
-                case "ROUND_UPDATE": {
-                    const blockHeight = Number.parseInt(data.block_height, 16);
-                    setBattleStatus(old => {
-                        if (!old) return old;
+        function connect() {
+            socket = new WebSocket(`${config.WSS_URL}/v1/ws/${battleId}`);
 
-                        const hitsMap = new Map<number, Round>();
-                        old.hits.forEach(hit => hitsMap.set(hit.block_height, hit));
+            socket.onopen = () => {
+                reconnectAttempts = 0;
+            };
 
-                        if (!hitsMap.has(blockHeight)) {
+            socket.onclose = () => {
+                if (cancelled) return;
+                const delay = nextReconnectDelayMs(reconnectAttempts);
+                reconnectAttempts += 1;
+                reconnectTimer = setTimeout(connect, delay);
+            };
+
+            socket.onmessage = (e) => {
+                const data: WebSocketEvent = JSON.parse(e.data);
+                switch (data.type) {
+                    case "BEST_SHARE_UPDATE": {
+                        const blockHeight = Number.parseInt(data.block_height, 16);
+                        const contenderIndex = data.user === "contender_1" ? 0 : 1;
+                        const diffKey = data.user === "contender_1" ? "contender_1_best_diff" : "contender_2_best_diff";
+                        setBattleStatus(old => {
+                            if (!old) return old;
+                            const updatedHits = old.hits.map(hit =>
+                                hit.block_height === blockHeight ? {...hit, [diffKey]: data.diff} : hit
+                            );
+                            const isCurrentRound = old.hits.find(hit => hit.block_height === blockHeight)?.winner === null;
+                            const updatedContenderInfo = isCurrentRound
+                                ? old.contender_info.map((c, i) =>
+                                    i === contenderIndex ? {...c, current_round_best_diff: data.diff} : c
+                                )
+                                : old.contender_info;
+                            return {...old, contender_info: updatedContenderInfo, hits: updatedHits};
+                        });
+                        break;
+                    }
+
+                    case "ROUND_UPDATE": {
+                        const blockHeight = Number.parseInt(data.block_height, 16);
+                        setBattleStatus(old => {
+                            if (!old) return old;
+
+                            const hitsMap = new Map<number, Round>();
+                            old.hits.forEach(hit => hitsMap.set(hit.block_height, hit));
+
+                            if (!hitsMap.has(blockHeight)) {
+                                hitsMap.set(blockHeight, {
+                                    block_height: blockHeight,
+                                    contender_1_best_diff: 0,
+                                    contender_2_best_diff: 0,
+                                    finalized_at: null,
+                                    battle_id: old.battle_id,
+                                    winner: null
+                                });
+                            }
+
+                            const hitsArray = Array.from(hitsMap.values())
+                                .sort((a, b) => b.block_height - a.block_height);
+
+                            return { ...old, current_round: data.round, hits: hitsArray };
+                        })
+                        break;
+                    }
+
+                    case "HIT_RESULT": {
+                        const blockHeight = Number.parseInt(data.block_height, 16);
+
+                        setBattleStatus(old => {
+                            if (!old) return old;
+
+                            const hitsMap = new Map<number, Round>();
+                            old.hits.forEach(hit => hitsMap.set(hit.block_height, hit));
+
                             hitsMap.set(blockHeight, {
                                 block_height: blockHeight,
-                                contender_1_best_diff: 0,
-                                contender_2_best_diff: 0,
-                                finalized_at: null,
+                                contender_1_best_diff: data.contender_1_best_diff,
+                                contender_2_best_diff: data.contender_2_best_diff,
+                                finalized_at: new Date(data.date),
                                 battle_id: old.battle_id,
-                                winner: null
+                                winner: data.winner
                             });
-                        }
 
-                        const hitsArray = Array.from(hitsMap.values())
-                            .sort((a, b) => b.block_height - a.block_height);
+                            const hitsArray = Array.from(hitsMap.values())
+                                .sort((a, b) => b.block_height - a.block_height);
 
-                        return { ...old, current_round: data.round, hits: hitsArray };
-                    })
-                    break;
-                }
+                            old.contender_info[0].pv = data.contender_1_pv
+                            old.contender_info[1].pv = data.contender_2_pv
 
-                case "HIT_RESULT": {
-                    const blockHeight = Number.parseInt(data.block_height, 16);
-
-                    setBattleStatus(old => {
-                        if (!old) return old;
-
-                        const hitsMap = new Map<number, Round>();
-                        old.hits.forEach(hit => hitsMap.set(hit.block_height, hit));
-
-                        hitsMap.set(blockHeight, {
-                            block_height: blockHeight,
-                            contender_1_best_diff: data.contender_1_best_diff,
-                            contender_2_best_diff: data.contender_2_best_diff,
-                            finalized_at: new Date(data.date),
-                            battle_id: old.battle_id,
-                            winner: data.winner
+                            return {...old, hits: hitsArray};
                         });
 
-                        const hitsArray = Array.from(hitsMap.values())
-                            .sort((a, b) => b.block_height - a.block_height);
-
-                        old.contender_info[0].pv = data.contender_1_pv
-                        old.contender_info[1].pv = data.contender_2_pv
-
-                        return {...old, hits: hitsArray};
-                    });
-
-                    break;
+                        break;
+                    }
+                    case "BATTLE_END": {
+                        console.debug("C fini au revoir");
+                        break;
+                    }
                 }
-                case "BATTLE_END": {
-                    console.debug("C fini au revoir");
-                    break;
-                }
-            }
+            };
         }
-        return ws
+
+        connect();
+
+        return () => {
+            cancelled = true;
+            if (reconnectTimer) clearTimeout(reconnectTimer);
+            socket?.close();
+        };
     }, [battleId]);
 
     const logContent = battleStatus?.hits?.length ? (
