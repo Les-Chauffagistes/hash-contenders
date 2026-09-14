@@ -13,18 +13,6 @@ COPY . .
 RUN npx prisma generate
 RUN npm run build
 
-FROM node:22-alpine AS migrator
-WORKDIR /app
-COPY --from=build /app/node_modules      ./node_modules
-COPY --from=build /app/prisma            ./prisma
-COPY --from=build /app/prisma.config.ts  ./
-
-CMD ["sh", "-c", "\
-  export DATABASE_URL=postgresql://${DB_USER}:$(cat /run/secrets/db_password)@${DB_HOST}:5432/${DB_NAME} && \
-  until npx prisma migrate deploy; do echo 'DB pas prête, retry...'; sleep 2; done && \
-  ls prisma/migrations/ | grep -v migration_lock.toml | sort | sha256sum | cut -d' ' -f1 > /migrations/done && \
-  echo 'Flag done, migrations applied'"]
-
 FROM node:22-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
@@ -36,6 +24,10 @@ COPY --from=build /app/.next/static     ./.next/static
 COPY --from=build /app/public           ./public
 COPY --from=build /app/src/generated    ./src/generated
 COPY --from=build /app/prisma           ./prisma
+COPY --from=build /app/prisma.config.ts ./
+# node_modules complet (le build standalone ne trace que les deps de runtime,
+# pas la CLI prisma dont on a besoin ici pour lancer les migrations)
+COPY --from=build /app/node_modules     ./node_modules
 
 COPY docker-entrypoint.sh ./
 RUN chmod +x docker-entrypoint.sh
