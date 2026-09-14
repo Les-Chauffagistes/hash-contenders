@@ -1,9 +1,11 @@
 import {Prisma, PrismaClient} from "@/generated/prisma/client";
 import {CURRENCY} from "@/services/bets/baseBet";
-import {burnUserCoins, InsufficientCoinsError, transferCoins} from "@/clients/wallet";
+import {WalletAPIClient, InsufficientCoinsError} from "@chauffagistes/cmn";
 import {escrowUserId} from "@/services/payouts/escrow";
 import {parseBetDebitKey} from "@/services/payouts/idempotencyKeys";
 import {logger} from "@/lib/logger";
+
+const walletClient = new WalletAPIClient(process.env.COINS_API_URL!, process.env.COINS_API_KEY!);
 
 const BATCH_SIZE = 50;
 const MAX_ATTEMPTS = 10;
@@ -82,7 +84,7 @@ async function dispatchRow(tx: Prisma.TransactionClient, row: OutboxRow): Promis
     if (row.direction === "escrow_to_burn") {
       // Pas de contrepartie : `userId` porte déjà le compte escrow dont le
       // solde doit être détruit (settleBattle l'a posé à escrowUserId).
-      await burnUserCoins({
+      await walletClient.burnUserCoins({
         params: {
           userId: Number(row.userId),
           amount: Number(row.amount),
@@ -93,7 +95,7 @@ async function dispatchRow(tx: Prisma.TransactionClient, row: OutboxRow): Promis
       });
     } else {
       const {fromUserId, toUserId} = counterparties(row);
-      await transferCoins({
+      await walletClient.transferCoins({
         fromUserId,
         toUserId,
         amount: Number(row.amount),

@@ -14,7 +14,8 @@ import {extractUserAccessToken} from "@/server/auth";
 import {prisma} from "@/server/db";
 import {NextResponse} from "next/server";
 import {logger} from "@/lib/logger";
-import {withRequestLogging, activeTraceContext} from "@chauffagistes/cmn";
+import {withRequestLogging} from "@chauffagistes/cmn";
+import {activeTraceContext} from "@chauffagistes/cmn/tracing";
 
 
 export const POST = withRequestLogging(async (request: Request) => {

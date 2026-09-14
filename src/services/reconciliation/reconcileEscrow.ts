@@ -1,8 +1,10 @@
 import {PrismaClient} from "@/generated/prisma/client";
-import {getSystemAccountBalance} from "@/clients/wallet";
+import {WalletAPIClient} from "@chauffagistes/cmn";
 import {escrowUserId} from "@/services/payouts/escrow";
 import {CURRENCY} from "@/services/bets/baseBet";
 import {logger} from "@/lib/logger";
+
+const walletClient = new WalletAPIClient(process.env.COINS_API_URL!, process.env.COINS_API_KEY!);
 
 const RECENT_BATTLES_LIMIT = 50;
 
@@ -35,7 +37,7 @@ export async function reconcileEscrowBalances(db: PrismaClient): Promise<EscrowD
     });
     if (stillPending > 0) continue; // pas encore entièrement dispatché, trop tôt pour juger
 
-    const balance = await getSystemAccountBalance(escrowUserId(battleId), CURRENCY);
+    const balance = await walletClient.getSystemAccountBalance(escrowUserId(battleId), CURRENCY);
     if (balance !== 0) {
       logger.error(`[reconciliation] escrow:battle:${battleId} devrait être à zéro, vaut ${balance}`);
       drifted.push({battleId, escrowBalance: balance});

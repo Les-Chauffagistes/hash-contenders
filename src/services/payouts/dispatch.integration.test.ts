@@ -8,13 +8,20 @@ import {
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
 import {PrismaClient} from "@/generated/prisma/client";
 
-vi.mock("@/clients/wallet", () => ({
+const {transferCoins, burnUserCoins} = vi.hoisted(() => ({
   transferCoins: vi.fn(),
   burnUserCoins: vi.fn(),
-  InsufficientCoinsError: class InsufficientCoinsError extends Error {},
 }));
 
-import {transferCoins, burnUserCoins, InsufficientCoinsError} from "@/clients/wallet";
+vi.mock("@chauffagistes/cmn", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@chauffagistes/cmn")>();
+  return {
+    ...actual,
+    WalletAPIClient: vi.fn().mockImplementation(() => ({transferCoins, burnUserCoins})),
+  };
+});
+
+import {InsufficientCoinsError} from "@chauffagistes/cmn";
 import {dispatchOutboxBatch} from "@/services/payouts/dispatch";
 
 const execFileAsync = promisify(execFile);
@@ -56,7 +63,7 @@ describe("dispatchOutboxBatch", () => {
   });
 
   it("marque dispatched et confirme le pari sur un débit escrow réussi", async () => {
-    vi.mocked(transferCoins).mockResolvedValue(undefined);
+    transferCoins.mockResolvedValue(undefined);
     const bet = await createBet("1", 10, "pending");
     await db.payoutOutbox.create({
       data: {
@@ -86,7 +93,7 @@ describe("dispatchOutboxBatch", () => {
   });
 
   it("calcule les bons comptes escrow pour un paiement gagnant", async () => {
-    vi.mocked(transferCoins).mockResolvedValue(undefined);
+    transferCoins.mockResolvedValue(undefined);
     await db.payoutOutbox.create({
       data: {
         battleId: "2",
@@ -111,7 +118,7 @@ describe("dispatchOutboxBatch", () => {
   });
 
   it("brûle la part non remboursée via burnUserCoins, pas via un transfert", async () => {
-    vi.mocked(burnUserCoins).mockResolvedValue(undefined);
+    burnUserCoins.mockResolvedValue(undefined);
     await db.payoutOutbox.create({
       data: {
         battleId: "8",
@@ -141,7 +148,7 @@ describe("dispatchOutboxBatch", () => {
   });
 
   it("passe le pari en void et l'outbox en failed sur un rejet définitif", async () => {
-    vi.mocked(transferCoins).mockRejectedValue(new InsufficientCoinsError());
+    transferCoins.mockRejectedValue(new InsufficientCoinsError());
     const bet = await createBet("3", 30, "pending");
     await db.payoutOutbox.create({
       data: {
@@ -162,7 +169,7 @@ describe("dispatchOutboxBatch", () => {
   });
 
   it("incrémente attempts et repousse next_attempt_at sur une erreur transitoire", async () => {
-    vi.mocked(transferCoins).mockRejectedValue(new Error("network timeout"));
+    transferCoins.mockRejectedValue(new Error("network timeout"));
     await db.payoutOutbox.create({
       data: {
         battleId: "4",
@@ -184,7 +191,7 @@ describe("dispatchOutboxBatch", () => {
   });
 
   it("passe en dead après le nombre maximal de tentatives, jamais un retry silencieux", async () => {
-    vi.mocked(transferCoins).mockRejectedValue(new Error("network timeout"));
+    transferCoins.mockRejectedValue(new Error("network timeout"));
     await db.payoutOutbox.create({
       data: {
         battleId: "5",

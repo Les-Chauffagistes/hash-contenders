@@ -1,7 +1,7 @@
 "use server";
 
 import { cookies, headers } from "next/headers";
-import { extractTraceContext, withTraceContext, type Context } from "@chauffagistes/cmn";
+import { extractTraceContext, withTraceContext, type Context } from "@chauffagistes/cmn/tracing";
 import { decodeAccessToken } from "@/server/auth";
 import { UnauthorizedError } from "@/lib/errors";
 import { prisma } from "@/server/db";

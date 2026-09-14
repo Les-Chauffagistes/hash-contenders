@@ -6,18 +6,25 @@ vi.mock("@/clients/referee", () => ({
   getBattleStatus: vi.fn(),
 }));
 
-vi.mock("@/clients/wallet", () => ({
-  transferCoins: vi.fn(),
+const {getUserCoins, transferCoins} = vi.hoisted(() => ({
   getUserCoins: vi.fn(),
-  InsufficientCoinsError: class InsufficientCoinsError extends Error {},
+  transferCoins: vi.fn(),
 }));
+
+vi.mock("@chauffagistes/cmn", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@chauffagistes/cmn")>();
+  return {
+    ...actual,
+    WalletAPIClient: vi.fn().mockImplementation(() => ({getUserCoins, transferCoins})),
+  };
+});
 
 vi.mock("@/server/auth", () => ({
   decodeAccessToken: vi.fn(),
 }));
 
 import {getBattleStatus} from "@/clients/referee";
-import {transferCoins, getUserCoins, InsufficientCoinsError} from "@/clients/wallet";
+import {InsufficientCoinsError} from "@chauffagistes/cmn";
 import {decodeAccessToken} from "@/server/auth";
 import {
   BattleFinishedError,
@@ -105,8 +112,8 @@ describe("submitBet", () => {
       user_id: "42",
       pseudo: "mineur",
     });
-    vi.mocked(getUserCoins).mockResolvedValue({balance: 1_000});
-    vi.mocked(transferCoins).mockResolvedValue(undefined);
+    getUserCoins.mockResolvedValue({balance: 1_000});
+    transferCoins.mockResolvedValue(undefined);
   });
 
   it("refuse un type de pari inconnu avant tout accès à la base", async () => {
@@ -269,7 +276,7 @@ describe("submitBet", () => {
 
   it("refuse le pari lorsque le solde est insuffisant", async () => {
     const {db, prisma} = createDb();
-    vi.mocked(getUserCoins).mockResolvedValueOnce({balance: 49});
+    getUserCoins.mockResolvedValueOnce({balance: 49});
 
     await expect(
       submitBet(
@@ -501,7 +508,7 @@ describe("submitBet", () => {
 
   it("annule le pari si le wallet refuse définitivement le débit (solde insuffisant)", async () => {
     const {db, prisma} = createDb();
-    vi.mocked(transferCoins).mockRejectedValueOnce(new InsufficientCoinsError());
+    transferCoins.mockRejectedValueOnce(new InsufficientCoinsError());
 
     await expect(
       submitBet(
@@ -531,7 +538,7 @@ describe("submitBet", () => {
 
   it("ne touche à rien si l'appel au wallet échoue pour une raison transitoire (réseau/timeout)", async () => {
     const {db, prisma} = createDb();
-    vi.mocked(transferCoins).mockRejectedValueOnce(new Error("coins API unavailable"));
+    transferCoins.mockRejectedValueOnce(new Error("coins API unavailable"));
 
     await submitBet(
       prisma,

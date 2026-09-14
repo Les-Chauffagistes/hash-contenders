@@ -13,18 +13,24 @@ vi.mock("@/clients/referee", () => ({
   getBattleStatus: vi.fn(),
 }));
 
-vi.mock("@/clients/wallet", () => ({
-  transferCoins: vi.fn(),
+const {getUserCoins, transferCoins} = vi.hoisted(() => ({
   getUserCoins: vi.fn(),
-  InsufficientCoinsError: class InsufficientCoinsError extends Error {},
+  transferCoins: vi.fn(),
 }));
+
+vi.mock("@chauffagistes/cmn", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@chauffagistes/cmn")>();
+  return {
+    ...actual,
+    WalletAPIClient: vi.fn().mockImplementation(() => ({getUserCoins, transferCoins})),
+  };
+});
 
 vi.mock("@/server/auth", () => ({
   decodeAccessToken: vi.fn(),
 }));
 
 import {getBattleStatus} from "@/clients/referee";
-import {getUserCoins, transferCoins} from "@/clients/wallet";
 import {decodeAccessToken} from "@/server/auth";
 import {submitBet} from "@/services/bets/create";
 import {settleBattle} from "@/services/settlement/settleBattle";
@@ -113,10 +119,10 @@ describe("pipeline complet : pari -> escrow -> settlement -> payout", () => {
       user_id: token,
       pseudo: `user-${token}`,
     }));
-    vi.mocked(getUserCoins).mockImplementation(async (access_token: string) => ({
+    getUserCoins.mockImplementation(async (access_token: string) => ({
       balance: wallet.get(Number(access_token)),
     }));
-    vi.mocked(transferCoins).mockImplementation(async (params) => {
+    transferCoins.mockImplementation(async (params) => {
       wallet.transfer(params.fromUserId, params.toUserId, params.amount);
     });
     // Bataille pas encore démarrée : les paris sont acceptés.
@@ -178,10 +184,10 @@ describe("pipeline complet : pari -> escrow -> settlement -> payout", () => {
       user_id: token,
       pseudo: `user-${token}`,
     }));
-    vi.mocked(getUserCoins).mockImplementation(async (access_token: string) => ({
+    getUserCoins.mockImplementation(async (access_token: string) => ({
       balance: wallet.get(Number(access_token)),
     }));
-    vi.mocked(transferCoins).mockImplementation(async (params) => {
+    transferCoins.mockImplementation(async (params) => {
       wallet.transfer(params.fromUserId, params.toUserId, params.amount);
     });
     // Bataille pas encore démarrée : les tickets à prix fixe sont acceptés.

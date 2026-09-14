@@ -5,7 +5,7 @@
  * dynamiquement, depuis la branche `NEXT_RUNTIME === "nodejs"`.
  */
 import {logger} from "@/lib/logger";
-import {setupTracing, shutdownTracing} from "@chauffagistes/cmn";
+import {setupTracing, shutdownTracing} from "@chauffagistes/cmn/tracing";
 
 export async function startBackgroundLoops() {
   // handleShutdownSignal: false — ce fichier a déjà son propre handler SIGTERM

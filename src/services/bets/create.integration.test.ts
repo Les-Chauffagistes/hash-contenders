@@ -13,18 +13,24 @@ vi.mock("@/clients/referee", () => ({
   getBattleStatus: vi.fn(),
 }));
 
-vi.mock("@/clients/wallet", () => ({
-  transferCoins: vi.fn(),
+const {getUserCoins, transferCoins} = vi.hoisted(() => ({
   getUserCoins: vi.fn(),
-  InsufficientCoinsError: class InsufficientCoinsError extends Error {},
+  transferCoins: vi.fn(),
 }));
+
+vi.mock("@chauffagistes/cmn", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@chauffagistes/cmn")>();
+  return {
+    ...actual,
+    WalletAPIClient: vi.fn().mockImplementation(() => ({getUserCoins, transferCoins})),
+  };
+});
 
 vi.mock("@/server/auth", () => ({
   decodeAccessToken: vi.fn(),
 }));
 
 import {getBattleStatus} from "@/clients/referee";
-import {transferCoins, getUserCoins} from "@/clients/wallet";
 import {decodeAccessToken} from "@/server/auth";
 import {betOnWinnerHandler} from "@/services/bets/betOnWinner";
 import {submitBet} from "@/services/bets/create";
@@ -77,8 +83,8 @@ describe("submitBet avec PostgreSQL", () => {
       user_id: "42",
       pseudo: "mineur",
     });
-    vi.mocked(getUserCoins).mockResolvedValue({balance: 1_000});
-    vi.mocked(transferCoins).mockResolvedValue(undefined);
+    getUserCoins.mockResolvedValue({balance: 1_000});
+    transferCoins.mockResolvedValue(undefined);
   });
 
   afterEach(async () => {
@@ -307,8 +313,8 @@ describe("submitBet avec PostgreSQL", () => {
 
   it("conserve le pari en void et l'outbox en failed lorsque le débit est refusé définitivement", async () => {
     const idempotencyKey = "1215178c-8117-4432-a24e-f9d7ab0b4f6b"; // gitleaks:allow
-    const {InsufficientCoinsError} = await import("@/clients/wallet");
-    vi.mocked(transferCoins).mockRejectedValueOnce(new InsufficientCoinsError());
+    const {InsufficientCoinsError} = await import("@chauffagistes/cmn");
+    transferCoins.mockRejectedValueOnce(new InsufficientCoinsError());
 
     await expect(
       submitBet(
@@ -346,7 +352,7 @@ describe("submitBet avec PostgreSQL", () => {
 
   it("laisse le pari et l'outbox pending lorsque le wallet échoue pour une raison transitoire", async () => {
     const idempotencyKey = "6f5f5e59-2f76-4f0a-9f38-6a1b0d0f7f19"; // gitleaks:allow
-    vi.mocked(transferCoins).mockRejectedValueOnce(new Error("coins API unavailable"));
+    transferCoins.mockRejectedValueOnce(new Error("coins API unavailable"));
 
     await submitBet(
       db,
