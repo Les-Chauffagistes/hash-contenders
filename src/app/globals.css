@@ -1,23 +1,42 @@
+/* ---------------- FONTS ---------------- */
+
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap');
+
 /* ---------------- VARIABLES ---------------- */
 
 :root {
-  --bg-main: #0e0e11;
-  --bg-alt: #15151a;
-  --bg-soft: #1c1c22;
-  --bg-blue: #7575902a;
-  --red: #ef4444;
-  
-  --border-color: #34343e;
-  --border-color-soft: #34343e5c;
+  --bg-main: #120d0a;
+  --bg-alt: #19120d;
+  --bg-soft: #1c140f;
+  --bg-blue: #ff7a1a12;
+  --red: #d1453a;
 
-  --text-main: #f5f5f7;
-  --text-muted: #b3b3bd;
+  --border-color: #3a2f27;
+  --border-color-soft: #3a2f275c;
 
-  --accent: #ff8a00;
-  --accent-soft: rgba(255, 138, 0, 0.15);
+  --text-main: #f2e9df;
+  --text-muted: #b9a996;
 
-  --radius: 16px;
+  --accent: #ff7a1a;
+  --accent-soft: rgba(255, 122, 26, 0.15);
+
+  --radius: 8px;
   --max-width: 1100px;
+
+  /* Palette Mining Forge : camps (mineur 1 = braise, mineur 2 = acier), lecture
+     façon jauge/LCD. Non consommée avant le Jalon 1 (écran de bataille). */
+  --camp-a: #ff7a1a;
+  --camp-a-deep: #7a2b06;
+  --camp-a-light: #ffb347;
+  --camp-b: #4f8fae;
+  --camp-b-deep: #2b4655;
+  --camp-b-light: #8fd0ea;
+  --gold: #d9a441;
+  --bg-lcd: #0d0906;
+  --border-bronze-light: #5a4331;
+
+  --font-display: 'Oswald', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
 }
 
 /* ---------------- RESET ---------------- */
@@ -34,7 +53,7 @@ body {
   padding: 0;
   background: var(--bg-main);
   color: var(--text-main);
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: var(--font-display);
 }
 
 a {
@@ -72,7 +91,7 @@ button.secondary {
 
 button.secondary:enabled:hover {
   background-color: var(--accent);
-  color: var(--background);
+  color: var(--bg-main);
 }
 
 button.tertiary {

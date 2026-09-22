@@ -19,9 +19,12 @@
 }
 
 .battleLabel {
-  color: var(--text-muted);
-  font-size: 13px;
-  font-weight: 600;
+  color: var(--gold);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
 .battleLabelGroup {
@@ -94,10 +97,12 @@
   width: 100%;
   padding: 9px 10px;
   border: 0;
-  border-radius: 7px;
+  border-radius: 5px;
   background: transparent;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
   text-align: left;
 }
 
@@ -118,11 +123,11 @@
 }
 
 .deleteMenuItem {
-  color: #ef6a6a;
+  color: #ff8a7a;
 }
 
 .deleteMenuItem:hover {
-  background: rgba(178, 36, 36, 0.14);
+  background: rgba(209, 69, 58, 0.14);
 }
 
 .dialogBackdrop {
@@ -154,8 +159,8 @@
   height: 42px;
   margin-bottom: 16px;
   border-radius: 50%;
-  background: rgba(178, 36, 36, 0.14);
-  color: #ef6a6a;
+  background: rgba(209, 69, 58, 0.14);
+  color: #ff8a7a;
 }
 
 .dialog h2 {
@@ -172,10 +177,10 @@
 .dialog .deleteError {
   margin-top: 16px;
   padding: 10px 12px;
-  border: 1px solid rgb(178, 36, 36);
+  border: 1px solid var(--red);
   border-radius: 8px;
-  background: rgba(178, 36, 36, 0.12);
-  color: #ef8a8a;
+  background: rgba(209, 69, 58, 0.14);
+  color: #ff9a8c;
 }
 
 .dialogActions {
@@ -200,8 +205,8 @@
 }
 
 .confirmDeleteButton {
-  border: 1px solid rgb(178, 36, 36);
-  background: rgb(178, 36, 36);
+  border: 1px solid var(--red);
+  background: var(--red);
   color: white;
 }
 
@@ -212,10 +217,16 @@
 }
 
 .page .contender_div {
-  border: solid 1px var(--border-color);
-  border-radius: 10px;
-  padding: 10px 20px;
-  background-color: var(--bg-blue);
+  border: solid 1px var(--border-bronze-light);
+  border-radius: 6px;
+  padding: 18px 22px;
+  background:
+    radial-gradient(circle 3px at 10px 10px, var(--border-bronze-light) 60%, transparent 61%),
+    radial-gradient(circle 3px at calc(100% - 10px) 10px, var(--border-bronze-light) 60%, transparent 61%),
+    radial-gradient(circle 3px at 10px calc(100% - 10px), var(--border-bronze-light) 60%, transparent 61%),
+    radial-gradient(circle 3px at calc(100% - 10px) calc(100% - 10px), var(--border-bronze-light) 60%, transparent 61%),
+    var(--bg-soft);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03), inset 0 -1px 0 rgba(0, 0, 0, 0.3);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -241,6 +252,22 @@
   align-items: end;
 }
 
+.roundBadgeWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.roundLabel {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
 .roundBadgeOuter {
   position: relative;
   z-index: 1;
@@ -248,27 +275,49 @@
 
 .roundBadgeMid {
   padding: 20px;
-  border-radius: 55px;
-  background-color: #ff88002c;
+  /* 50% et non un rayon fixe : .roundBadgeInner a désormais une taille figée
+     (width/height), donc chaque anneau qui l'enveloppe (padding constant)
+     reste un carré parfait — 50% en fait un cercle quel que soit son diamètre
+     réel, au lieu d'un rayon en px qui décrochait dès que le contenu (le
+     numéro de round) changeait de largeur. */
+  border-radius: 50%;
+  /* Anneau segmenté façon rivets, en repeating-conic-gradient : pas de bordure
+     "cercle" classique possible sur un disque, donc c'est le fond lui-même
+     qui simule le métal riveté. */
+  background: repeating-conic-gradient(var(--border-bronze-light) 0deg 9deg, var(--border-color) 9deg 18deg);
   margin: -50px;
 }
 
 .roundBadgeRing {
-  padding: 15px;
-  border-radius: 40px;
-  background-color: #ff88006a;
+  padding: 6px;
+  border-radius: 50%;
+  background-color: var(--gold);
 }
 
 .roundBadgeInner {
   display: flex;
-  background-color: var(--accent);
-  border-radius: 25px;
-  padding: 10px 10px;
-  align-items: end;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 68px;
+  height: 68px;
+  overflow: hidden;
+  background: radial-gradient(circle at 35% 30%, #241a13, var(--bg-lcd) 70%);
+  border: 1px solid var(--border-bronze-light);
+  border-radius: 50%;
+}
+
+.roundBadgeInner h1 {
+  color: var(--text-main);
+  font-weight: 700;
+  font-size: 28px;
+  line-height: 1;
 }
 
 .roundBadgeTotal {
-  margin-bottom: 2px;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 500;
 }
 
 .historyPanel {
@@ -277,8 +326,10 @@
   flex-direction: column;
   overflow: hidden;
   background-color: var(--bg-alt);
-  border-top-left-radius: 20px;
-  border-top-right-radius: 20px;
+  border: 1px solid var(--border-color);
+  border-bottom: none;
+  border-top-left-radius: 10px;
+  border-top-right-radius: 10px;
   padding-top: 20px;
   margin: 0 10px;
 }
@@ -286,7 +337,32 @@
 .historyHeader {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   padding: 5px 30px 30px;
+}
+
+.historyHeader p:first-child,
+.historyHeader p:last-child {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 20px;
+}
+
+.historyHeader p:first-child {
+  color: var(--camp-a-light);
+}
+
+.historyHeader p:last-child {
+  color: var(--camp-b-light);
+}
+
+.historyHeader p:nth-child(2) {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
 }
 
 .logScroll {
@@ -322,26 +398,27 @@
 
   .roundBadgeMid {
     padding: 10px;
-    border-radius: 40px;
+    border-radius: 50%;
     margin: -30px;
   }
 
   .roundBadgeRing {
-    padding: 8px;
-    border-radius: 28px;
+    padding: 4px;
+    border-radius: 50%;
   }
 
   .roundBadgeInner {
-    border-radius: 18px;
-    padding: 6px 8px;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
   }
 
   .roundBadgeInner h1 {
     font-size: 20px;
   }
 
-  .roundBadgeInner h2 {
-    font-size: 14px;
+  .roundBadgeTotal {
+    font-size: 11px;
   }
 
   .historyPanel {

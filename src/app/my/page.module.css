@@ -11,10 +11,14 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    border-radius: 28px;
-    border: 1px solid var(--border-color);
-    padding: 10px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border-bronze-light);
+    background: var(--bg-lcd);
+    padding: 8px 14px;
     width: fit-content;
+    font-family: var(--font-mono);
+    font-weight: 600;
+    color: var(--gold);
 }
 
 .header {

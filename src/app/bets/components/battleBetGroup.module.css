@@ -29,7 +29,11 @@
 
 .battleState {
     justify-self: end;
-    font-size: 0.75rem;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
     color: var(--text-muted);
 }
 
@@ -40,7 +44,7 @@
 }
 
 .winnings {
-    color: #4ade80;
+    color: var(--gold);
     font-weight: 500;
 }
 

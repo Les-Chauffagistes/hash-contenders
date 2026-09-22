@@ -119,7 +119,9 @@ function BetCreateForm() {
 
       {battle && (
         <p className={styles.battleContext}>
-          {contenders[0]} <span className={styles.vs}>vs</span> {contenders[1]}
+          <span className={styles.contenderA}>{contenders[0]}</span>
+          <span className={styles.vs}>vs</span>
+          <span className={styles.contenderB}>{contenders[1]}</span>
         </p>
       )}
 
