@@ -17,7 +17,9 @@ vi.mock("@chauffagistes/cmn", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@chauffagistes/cmn")>();
   return {
     ...actual,
-    WalletAPIClient: vi.fn().mockImplementation(() => ({transferCoins, burnUserCoins})),
+    WalletAPIClient: vi.fn().mockImplementation(function () {
+      return {transferCoins, burnUserCoins};
+    }),
   };
 });
 
