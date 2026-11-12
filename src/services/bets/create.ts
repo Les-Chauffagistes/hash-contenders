@@ -1,7 +1,6 @@
 import {Prisma, PrismaClient} from "@/generated/prisma/client";
 import {z} from "zod";
 import {getBattleStatus} from "@/clients/referee";
-import {getUserCoins, transferCoins, InsufficientCoinsError} from "@/clients/wallet";
 import {decodeAccessToken} from "@/server/auth";
 import {BetContext, CreateBetSchema, CURRENCY} from "@/services/bets/baseBet";
 import {getBetHandler} from "@/services/bets/registry";
@@ -17,7 +16,10 @@ import {
 } from "@/services/bets/errors";
 import { escrowUserId } from "@/services/payouts/escrow";
 import { betDebitKey } from "@/services/payouts/idempotencyKeys";
-import {withTraceContext, type Context} from "@chauffagistes/cmn";
+import {withTraceContext, type Context} from "@chauffagistes/cmn/tracing";
+import {WalletAPIClient, InsufficientCoinsError} from "@chauffagistes/cmn";
+
+const walletClient = new WalletAPIClient(process.env.COINS_API_URL!, process.env.COINS_API_KEY!);
 
 /**
  * Déroulé commun à tous les paris. Le handler du type concerné n'intervient que
@@ -79,7 +81,7 @@ export async function submitBet(db: PrismaClient, data: z.infer<typeof CreateBet
         : null;
 
     if (!editableBet) {
-        const {balance} = await withTrace(() => getUserCoins(access_token, CURRENCY));
+        const {balance} = await withTrace(() => walletClient.getUserCoins(access_token, CURRENCY));
         if (balance < data.amount) throw new InsufficientBalanceError();
     }
 
@@ -149,7 +151,7 @@ export async function submitBet(db: PrismaClient, data: z.infer<typeof CreateBet
     // écrite laisse le dispatcher rejouer plus tard avec la même clé.
     const idempotencyKey = betDebitKey(battleId, storedBetId!);
     try {
-        await withTrace(() => transferCoins({
+        await withTrace(() => walletClient.transferCoins({
             fromUserId: ctx.userId,
             toUserId: escrowUserId(data.battle_id),
             amount: data.amount,

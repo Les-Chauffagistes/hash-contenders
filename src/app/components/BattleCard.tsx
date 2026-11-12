@@ -43,6 +43,7 @@ export default function BattleCard({ battle, onBet }: Readonly<Props>) {
             <div className={styles.header}>
                 <div className={styles.badges}>
                     <span className={`${styles.badge} ${badgeClass}`}>
+                        {badgeClass === styles.live && <span className={styles.liveDot} aria-hidden="true" />}
                         {badgeLabel}
                     </span>
                     <span className={styles.modeIcon} title={modeLabel} aria-label={modeLabel}>

@@ -1,10 +1,11 @@
 import {NextResponse} from "next/server";
-import {getPseudosByUserId} from "@/clients/auth";
 import {getBattlesByIds, getBattleStatus} from "@/clients/referee";
 import {prisma} from "@/server/db";
 import {findBattleBets} from "@/services/bets/read";
 import {toBattleBetsView} from "@/app/api/bets/mapper";
 import {logger} from "@/lib/logger";
+import {UserAPIClient} from "@chauffagistes/cmn";
+import {config} from "@/lib/config";
 
 /**
  * Vue publique des paris d'une bataille, sans authentification comme la page
@@ -31,9 +32,11 @@ export async function GET(request: Request, {params}: {params: Promise<{battle_i
         const battleId = Number(battle_id);
         const isValidBattleId = Number.isSafeInteger(battleId);
 
+        const userAPIClient = new UserAPIClient(config.AUTH_API_URL);
+
         const [battles, pseudos, currentRound] = await Promise.all([
             isValidBattleId ? getBattlesByIds([battleId]) : [],
-            getPseudosByUserId(bets.map((bet) => bet.userId)),
+            userAPIClient.getPseudosByUserId(bets.map((bet) => bet.userId)),
             isValidBattleId ? fetchCurrentRound(battleId) : Promise.resolve(null),
         ]);
         const betOnBestShareRevealed = (currentRound ?? 0) > 0;

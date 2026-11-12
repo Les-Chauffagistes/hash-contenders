@@ -12,6 +12,7 @@
 
 
 .desktopnavbar li {
+    border: 1px solid transparent;
     border-radius: var(--radius);
     cursor: pointer;
     align-items: center;
@@ -28,13 +29,19 @@
     gap: 8px;
 }
 
+.desktopnavbar li p {
+    font-family: var(--font-mono);
+    letter-spacing: 0.04em;
+}
+
 .desktopnavbar li:last-of-type {
     margin-top: auto;
 }
 
 .desktopnavbar li.active {
-    background-color: var(--bg-soft);
-    color: var(--accent);
+    background: var(--bg-lcd);
+    border-color: var(--border-bronze-light);
+    color: var(--gold);
 }
 
 .desktopnavbar li:hover {
@@ -42,8 +49,9 @@
 }
 
 .desktopnavbar li.active:hover {
-    background-color: var(--bg-soft);
-    color: var(--accent);
+    background: var(--bg-lcd);
+    border-color: var(--border-bronze-light);
+    color: var(--gold);
 }
 
 @media (max-width: 768px) {

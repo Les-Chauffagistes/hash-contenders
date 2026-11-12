@@ -11,19 +11,33 @@
 .title {
     font-size: 24px;
     font-weight: 600;
-    letter-spacing: -0.5px;
+    letter-spacing: 0.01em;
 }
 
 .battleContext {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     font-size: 15px;
     font-weight: 600;
-    color: var(--text-main);
+    text-transform: uppercase;
+    letter-spacing: 0.01em;
+}
+
+.contenderA {
+    color: var(--camp-a-light);
+}
+
+.contenderB {
+    color: var(--camp-b-light);
 }
 
 .vs {
-    color: var(--text-muted);
-    font-weight: 400;
-    margin: 0 6px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--gold);
+    font-weight: 500;
+    text-transform: uppercase;
 }
 
 .betTypeSection {
@@ -36,10 +50,13 @@
 }
 
 .sectionTitle {
-    font-weight: 600;
-    font-size: 14px;
+    font-family: var(--font-mono);
+    font-weight: 500;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
     padding: 0 8px;
-    color: var(--accent);
+    color: var(--gold);
 }
 
 .field {
@@ -49,18 +66,22 @@
 }
 
 .field label {
-    font-size: 13px;
+    font-family: var(--font-mono);
+    font-size: 11px;
     font-weight: 500;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
     color: var(--text-muted);
 }
 
 .field input[type=text],
 .field input[type=number] {
     padding: 8px 12px;
-    border-radius: 7px;
+    border-radius: 5px;
     border: 1px solid var(--border-color);
-    background-color: var(--bg-alt);
+    background-color: var(--bg-lcd);
     color: var(--text-main);
+    font-family: var(--font-mono);
     font-size: 14px;
 }
 
@@ -75,18 +96,22 @@
     flex-wrap: wrap;
     gap: 4px;
     padding: 4px;
-    border-radius: 8px;
-    background-color: var(--bg-alt);
+    border-radius: 6px;
+    background-color: var(--bg-lcd);
+    border: 1px solid var(--border-color);
 }
 
 .betTypeTab {
     flex: 1 1 140px;
     padding: 8px 14px;
     border: 1px solid transparent;
-    border-radius: 5px;
+    border-radius: 4px;
     background: transparent;
-    font-size: 13px;
+    font-family: var(--font-mono);
+    font-size: 12px;
     font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
     color: var(--text-muted);
     cursor: pointer;
     transition: border-color 0.2s, background-color 0.2s, color 0.2s, box-shadow 0.2s;
@@ -97,10 +122,9 @@
 }
 
 .betTypeTabSelected {
-    border-color: var(--border-color);
-    background-color: var(--bg-main);
-    box-shadow: 0 1px 2px rgb(0 0 0 / 12%);
-    color: var(--text-main);
+    border-color: var(--border-bronze-light);
+    background-color: var(--bg-soft);
+    color: var(--gold);
     font-weight: 600;
     cursor: default;
 }
@@ -142,9 +166,12 @@
 
 .stakeFieldset legend {
     padding: 0 6px;
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--gold);
 }
 
 .betNotice {
@@ -184,12 +211,12 @@
 
 .errorLabel {
     font-size: 12px;
-    color: rgb(178, 36, 36);
+    color: var(--red);
 }
 
 .successLabel {
     font-size: 14px;
-    color: rgb(34, 139, 34);
+    color: var(--gold);
     font-weight: 500;
 }
 

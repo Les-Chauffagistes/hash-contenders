@@ -13,18 +13,26 @@ vi.mock("@/clients/referee", () => ({
   getBattleStatus: vi.fn(),
 }));
 
-vi.mock("@/clients/wallet", () => ({
-  transferCoins: vi.fn(),
+const {getUserCoins, transferCoins} = vi.hoisted(() => ({
   getUserCoins: vi.fn(),
-  InsufficientCoinsError: class InsufficientCoinsError extends Error {},
+  transferCoins: vi.fn(),
 }));
+
+vi.mock("@chauffagistes/cmn", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@chauffagistes/cmn")>();
+  return {
+    ...actual,
+    WalletAPIClient: vi.fn().mockImplementation(function () {
+      return {getUserCoins, transferCoins};
+    }),
+  };
+});
 
 vi.mock("@/server/auth", () => ({
   decodeAccessToken: vi.fn(),
 }));
 
 import {getBattleStatus} from "@/clients/referee";
-import {getUserCoins, transferCoins} from "@/clients/wallet";
 import {decodeAccessToken} from "@/server/auth";
 import {submitBet} from "@/services/bets/create";
 import {settleBattle} from "@/services/settlement/settleBattle";
@@ -62,6 +70,23 @@ class FakeWallet {
 }
 
 const battleId = 999;
+
+/**
+ * Rejoue le dispatcher jusqu'à ce qu'il ne reste plus de ligne pending jamais
+ * tentée (les lignes déjà en échec transitoire, en backoff, ne comptent pas).
+ * `nextAttemptAt` est posé par Prisma (horloge de l'hôte) alors que le
+ * dispatcher compare à `now()` de Postgres (horloge du conteneur) : un léger
+ * décalage rend une ligne fraîche pas encore « due » au premier passage, comme
+ * en production où le tick suivant la reprend.
+ */
+async function drainOutbox(db: PrismaClient) {
+  for (let attempt = 0; attempt < 50; attempt++) {
+    await dispatchOutboxBatch(db);
+    if ((await db.payoutOutbox.count({where: {status: "pending", attempts: 0}})) === 0) return;
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+  throw new Error("payout_outbox : des lignes jamais tentées restent pending après 50 passes du dispatcher");
+}
 
 function battleStatus(overrides: Partial<BattleStatus> = {}): BattleStatus {
   return {
@@ -113,10 +138,10 @@ describe("pipeline complet : pari -> escrow -> settlement -> payout", () => {
       user_id: token,
       pseudo: `user-${token}`,
     }));
-    vi.mocked(getUserCoins).mockImplementation(async (access_token: string) => ({
+    getUserCoins.mockImplementation(async (access_token: string) => ({
       balance: wallet.get(Number(access_token)),
     }));
-    vi.mocked(transferCoins).mockImplementation(async (params) => {
+    transferCoins.mockImplementation(async (params) => {
       wallet.transfer(params.fromUserId, params.toUserId, params.amount);
     });
     // Bataille pas encore démarrée : les paris sont acceptés.
@@ -152,7 +177,7 @@ describe("pipeline complet : pari -> escrow -> settlement -> payout", () => {
     await settleBattle(db, battleId);
 
     // Dispatch des payouts escrow -> gagnants.
-    await dispatchOutboxBatch(db);
+    await drainOutbox(db);
 
     expect(wallet.get(escrow)).toBe(0);
     // Pot 180 réparti entre user 1 (100) et user 3 (30) au prorata : floor(18000/130)=138
@@ -178,10 +203,10 @@ describe("pipeline complet : pari -> escrow -> settlement -> payout", () => {
       user_id: token,
       pseudo: `user-${token}`,
     }));
-    vi.mocked(getUserCoins).mockImplementation(async (access_token: string) => ({
+    getUserCoins.mockImplementation(async (access_token: string) => ({
       balance: wallet.get(Number(access_token)),
     }));
-    vi.mocked(transferCoins).mockImplementation(async (params) => {
+    transferCoins.mockImplementation(async (params) => {
       wallet.transfer(params.fromUserId, params.toUserId, params.amount);
     });
     // Bataille pas encore démarrée : les tickets à prix fixe sont acceptés.
@@ -215,7 +240,7 @@ describe("pipeline complet : pari -> escrow -> settlement -> payout", () => {
       }),
     );
     await settleBattle(db, bestShareBattleId);
-    await dispatchOutboxBatch(db);
+    await drainOutbox(db);
 
     // Chaque ticket est remboursé à 80% (40), 20% (10) reste en escrow, brûlé.
     expect(wallet.get(4)).toBe(1_000 - 50 + 40);

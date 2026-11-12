@@ -5,10 +5,19 @@
  * quel que soit le type de pari.
  */
 .betcard {
-    background: var(--bg-soft);
-    padding: 16px 20px;
+    border: 1px solid var(--border-bronze-light);
     border-radius: var(--radius);
-    border: 1px solid var(--border-color);
+    padding: 16px 20px;
+    /* Même rivetage aux 4 coins que les plaques de combattants de l'écran de
+       bataille (battle/[id]/page.module.css .contender_div) : un ticket de
+       pari doit se lire comme une plaque de la même arène, pas comme un
+       relevé bancaire. */
+    background:
+        radial-gradient(circle 3px at 10px 10px, var(--border-bronze-light) 60%, transparent 61%),
+        radial-gradient(circle 3px at calc(100% - 10px) 10px, var(--border-bronze-light) 60%, transparent 61%),
+        radial-gradient(circle 3px at 10px calc(100% - 10px), var(--border-bronze-light) 60%, transparent 61%),
+        radial-gradient(circle 3px at calc(100% - 10px) calc(100% - 10px), var(--border-bronze-light) 60%, transparent 61%),
+        var(--bg-soft);
     display: grid;
     grid-template-columns: 1fr auto;
     align-items: start;
@@ -18,21 +27,24 @@
 .prediction {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 3px;
     min-width: 0;
 }
 
 .predictionLabel {
-    font-size: 0.75rem;
-    font-weight: 600;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    font-weight: 500;
     text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--text-muted);
+    letter-spacing: 0.08em;
+    color: var(--gold);
 }
 
 .predictionValue {
-    font-size: 1.25rem;
+    font-size: 1.15rem;
     font-weight: 600;
+    letter-spacing: 0.01em;
+    text-transform: uppercase;
     line-height: 1.2;
     overflow-wrap: anywhere;
 }
@@ -41,14 +53,16 @@
     grid-column: 1 / -1;
     display: flex;
     flex-wrap: wrap;
+    align-items: center;
     gap: 6px;
     font-size: 0.8125rem;
     color: var(--text-muted);
 }
 
 .amount {
+    font-family: var(--font-mono);
     color: var(--text-main);
-    font-weight: 500;
+    font-weight: 600;
 }
 
 .separator {
@@ -68,35 +82,42 @@
 .badge {
     justify-self: end;
     white-space: nowrap;
-    font-size: 0.75rem;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
     font-weight: 600;
-    padding: 3px 10px;
-    border-radius: 20px;
+    padding: 3px 9px;
+    border-radius: 3px;
+    border: 1px solid transparent;
     text-transform: uppercase;
-    letter-spacing: 0.03em;
+    letter-spacing: 0.05em;
 }
 
 .confirmed {
-    background: hsl(173 71% 45% / 0.15);
-    color: hsl(173 69% 58%);
+    border-color: var(--border-bronze-light);
+    background: var(--bg-lcd);
+    color: var(--gold);
 }
 
 .void {
-    background: rgba(148, 163, 184, 0.15);
-    color: #94a3b8;
+    border-color: var(--border-color);
+    background: transparent;
+    color: var(--text-muted);
 }
 
 .pending {
-    background: var(--accent-soft);
-    color: var(--accent);
+    border-color: var(--border-color);
+    background: var(--bg-lcd);
+    color: var(--text-muted);
 }
 
 .lost {
-    background: rgba(239, 68, 68, 0.15);
-    color: #ef4444;
+    border-color: var(--red);
+    background: rgba(209, 69, 58, 0.12);
+    color: #ff9a8c;
 }
 
 .won {
-    background: rgba(34, 197, 94, 0.15);
-    color: #4ade80;
+    border-color: var(--gold);
+    background: rgba(217, 164, 65, 0.16);
+    color: var(--gold);
 }

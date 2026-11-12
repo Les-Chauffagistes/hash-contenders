@@ -1,97 +1,186 @@
 .player {
     display: flex;
     flex-direction: column;
+    gap: 14px;
     width: 100%;
     min-width: 0;
 }
 
-.playerEnd {
-    align-items: end;
+.headerRow {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.headerRowEnd {
+    flex-direction: row-reverse;
+}
+
+.avatar {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px solid var(--border-bronze-light);
+    font-weight: 700;
+    font-size: 17px;
+}
+
+.avatarA {
+    background: radial-gradient(circle at 32% 28%, var(--camp-a-light), var(--camp-a) 55%, var(--camp-a-deep) 100%);
+    color: #2a1103;
+}
+
+.avatarB {
+    background: radial-gradient(circle at 32% 28%, var(--camp-b-light), var(--camp-b) 55%, var(--camp-b-deep) 100%);
+    color: #04151e;
+}
+
+.identity {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.identityEnd {
+    align-items: flex-end;
 }
 
 .name {
-    margin-bottom: 40px;
+    font-weight: 600;
+    font-size: 18px;
+    letter-spacing: 0.01em;
+    text-transform: uppercase;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.nameA {
+    color: var(--camp-a-light);
+}
+
+.nameB {
+    color: var(--camp-b-light);
 }
 
 .workerTag {
-    margin-top: -32px;
-    margin-bottom: 16px;
-    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.gaugeBlock {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.gaugeLabels {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
     color: var(--text-muted);
 }
 
-.table {
-    /* Pas de width:100% ici : forcer le tableau à occuper toute la largeur
-       du parent crée un espace excédentaire que le navigateur redistribue
-       de façon ambiguë entre les colonnes (table-layout: auto), ce qui
-       "colle" la batterie à gauche de sa cellule au lieu de la coller à
-       droite de sa carte. En laissant le tableau se dimensionner sur son
-       propre contenu (comportement d'origine), il n'y a plus d'espace
-       excédentaire à redistribuer : les colonnes restent naturellement
-       collées l'une à l'autre, et .playerEnd (align-items: end) pousse
-       l'ensemble du tableau contre le bord droit de la carte. */
-    table-layout: auto;
+.statBox {
+    align-self: flex-start;
+    background: var(--bg-lcd);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 7px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
 }
 
-.diffCellStart,
-.diffCellEnd {
-    /* Force cette cellule à ne prendre que la largeur de son contenu
-       (la batterie) : tout espace excédentaire du tableau est ainsi
-       redistribué vers l'autre colonne (le texte), qui peut l'absorber
-       sans se déformer ni se décoller de son bord. */
-    width: 1px;
+.statBoxEnd {
+    align-self: flex-end;
+    align-items: flex-end;
 }
 
-.diffValue {
-    margin-left: 50px;
-    white-space: nowrap;
+.statLabel {
+    font-family: var(--font-mono);
+    font-size: 9.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
 }
 
-.diffValueEnd {
-    margin-right: 50px;
-    white-space: nowrap;
+.statValue {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    font-size: 19px;
 }
 
-.percent {
-    text-align: center;
-    margin-top: 20px;
-    width: 100%;
+.statValueA {
+    color: var(--camp-a-light);
+}
+
+.statValueB {
+    color: var(--camp-b-light);
 }
 
 @media (max-width: 768px) {
-    .name {
-        margin-bottom: 12px;
-        font-size: 18px;
-        max-width: 100%;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
+    .player {
+        gap: 8px;
     }
 
-    .diffValue {
-        margin-left: 10px;
-        font-size: 15px;
-    }
-
-    .diffValueEnd {
-        margin-right: 10px;
-        font-size: 15px;
-    }
-
-    .percent {
-        margin-top: 8px;
+    .avatar {
+        width: 30px;
+        height: 30px;
         font-size: 13px;
+    }
+
+    .name {
+        font-size: 14px;
+    }
+
+    .workerTag {
+        font-size: 10px;
+    }
+
+    .statBox {
+        padding: 5px 8px;
+    }
+
+    .statValue {
+        font-size: 15px;
     }
 }
 
 @media (max-width: 380px) {
-    .diffValue {
-        margin-left: 4px;
-        font-size: 13px;
+    .headerRow {
+        gap: 8px;
     }
 
-    .diffValueEnd {
-        margin-right: 4px;
+    .avatar {
+        width: 26px;
+        height: 26px;
+        font-size: 12px;
+    }
+
+    .name {
+        font-size: 12.5px;
+    }
+
+    .statValue {
         font-size: 13px;
     }
 }
