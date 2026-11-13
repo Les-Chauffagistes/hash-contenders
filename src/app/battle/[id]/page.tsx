@@ -2,12 +2,13 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { BattleStatus } from "../../../../models/BattleStatus";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getBattleStatus, getMe } from "@/app/api";
 import PlayerLeft from "./components/PlayerLeft";
 import PlayerRight from "./components/PlayerRight";
 import Log from "./components/Log";
-import { WebSocketEvent } from "../../../../models/WebSocketEvents";
+import { ShareEvent, WebSocketEvent } from "../../../../models/WebSocketEvents";
+import UnitConverter from "@/lib/UnitConverter";
 import styles from "./page.module.css"
 import { Round } from "../../../../models/Hit";
 import { Coins, EllipsisVertical, HandFist, ListFilter, Trash2, UserRound, UsersRound } from "lucide-react";
@@ -25,6 +26,12 @@ export default function BatlePage() {
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [deleteError, setDeleteError] = useState<string | null>(null);
+    const [shares, setShares] = useState<ShareEvent[]>([]);
+    const [connection, setConnection] = useState(false);
+    const [leadFlash, setLeadFlash] = useState<0 | 1 | 2>(0);
+    const shareQueue = useRef<ShareEvent[]>([]);
+    const seenShares = useRef(new Set<string>());
+    const previousLead = useRef(0);
     const path = usePathname();
     const router = useRouter();
     const battleId = path?.split("/")[2];
@@ -68,126 +75,132 @@ export default function BatlePage() {
         }
     }
 
-    // Produit 2 ws en mode dev. Normal. N'en produit qu'une en build.
-    // Se reconnecte avec un backoff exponentiel (+jitter) tant que le composant
-    // reste monté : un déploiement stop-first coupe la connexion de tous les
-    // clients en train de suivre une bataille, sans ça ils restent bloqués
-    // jusqu'à un F5 manuel.
     useEffect(() => {
-        let cancelled = false;
-        let socket: WebSocket | null = null;
+        if (!battleId) return;
+        let ws: WebSocket;
+        let stopped = false;
         let reconnectAttempts = 0;
-        let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
-
-        function connect() {
-            socket = new WebSocket(`${config.WSS_URL}/v1/ws/${battleId}`);
-
-            socket.onopen = () => {
-                reconnectAttempts = 0;
-            };
-
-            socket.onclose = () => {
-                if (cancelled) return;
-                const delay = nextReconnectDelayMs(reconnectAttempts);
-                reconnectAttempts += 1;
-                reconnectTimer = setTimeout(connect, delay);
-            };
-
-            socket.onmessage = (e) => {
-                const data: WebSocketEvent = JSON.parse(e.data);
-                switch (data.type) {
-                    case "BEST_SHARE_UPDATE": {
-                        const blockHeight = Number.parseInt(data.block_height, 16);
-                        const contenderIndex = data.user === "contender_1" ? 0 : 1;
-                        const diffKey = data.user === "contender_1" ? "contender_1_best_diff" : "contender_2_best_diff";
-                        setBattleStatus(old => {
-                            if (!old) return old;
-                            const updatedHits = old.hits.map(hit =>
-                                hit.block_height === blockHeight ? {...hit, [diffKey]: data.diff} : hit
-                            );
-                            const isCurrentRound = old.hits.find(hit => hit.block_height === blockHeight)?.winner === null;
-                            const updatedContenderInfo = isCurrentRound
-                                ? old.contender_info.map((c, i) =>
-                                    i === contenderIndex ? {...c, current_round_best_diff: data.diff} : c
-                                )
-                                : old.contender_info;
-                            return {...old, contender_info: updatedContenderInfo, hits: updatedHits};
-                        });
-                        break;
+        let reconnect: ReturnType<typeof setTimeout>;
+        const connect = () => {
+        ws = new WebSocket(`${config.WSS_URL}/v1/ws/${battleId}`);
+        ws.onopen = () => { reconnectAttempts = 0; setConnection(true); getBattleStatus(battleId, true).then(setBattleStatus).catch(console.error); };
+        ws.onclose = () => { setConnection(false); if (!stopped) reconnect = setTimeout(connect, nextReconnectDelayMs(reconnectAttempts++)); };
+        ws.onmessage = (e) => {
+            const data: WebSocketEvent = JSON.parse(e.data);
+            switch (data.type) {
+                case "SHARE": {
+                    const key = `${data.user}:${data.share_id}`;
+                    if (!seenShares.current.has(key)) {
+                        seenShares.current.add(key);
+                        if (seenShares.current.size > 5000) seenShares.current.delete(seenShares.current.values().next().value!);
+                        shareQueue.current.push(data);
                     }
+                    break;
+                }
+                case "BEST_SHARE_UPDATE": {
+                    const blockHeight = Number(data.block_height);
+                    const contenderIndex = data.user === "contender_1" ? 0 : 1;
+                    const diffKey = data.user === "contender_1" ? "contender_1_best_diff" : "contender_2_best_diff";
+                    setBattleStatus(old => {
+                        if (!old) return old;
+                        const updatedHits = old.hits.map(hit =>
+                            hit.block_height === blockHeight ? {...hit, [diffKey]: data.diff} : hit
+                        );
+                        const isCurrentRound = old.hits.find(hit => hit.block_height === blockHeight)?.winner === null;
+                        const updatedContenderInfo = isCurrentRound
+                            ? old.contender_info.map((c, i) =>
+                                i === contenderIndex ? {...c, current_round_best_diff: data.diff} : c
+                            )
+                            : old.contender_info;
+                        return {...old, contender_info: updatedContenderInfo, hits: updatedHits};
+                    });
+                    break;
+                }
 
-                    case "ROUND_UPDATE": {
-                        const blockHeight = Number.parseInt(data.block_height, 16);
-                        setBattleStatus(old => {
-                            if (!old) return old;
+                case "ROUND_UPDATE": {
+                    const blockHeight = Number(data.block_height);
+                    setBattleStatus(old => {
+                        if (!old) return old;
 
-                            const hitsMap = new Map<number, Round>();
-                            old.hits.forEach(hit => hitsMap.set(hit.block_height, hit));
+                        const hitsMap = new Map<number, Round>();
+                        old.hits.forEach(hit => hitsMap.set(hit.block_height, hit));
 
-                            if (!hitsMap.has(blockHeight)) {
-                                hitsMap.set(blockHeight, {
-                                    block_height: blockHeight,
-                                    contender_1_best_diff: 0,
-                                    contender_2_best_diff: 0,
-                                    finalized_at: null,
-                                    battle_id: old.battle_id,
-                                    winner: null
-                                });
-                            }
-
-                            const hitsArray = Array.from(hitsMap.values())
-                                .sort((a, b) => b.block_height - a.block_height);
-
-                            return { ...old, current_round: data.round, hits: hitsArray };
-                        })
-                        break;
-                    }
-
-                    case "HIT_RESULT": {
-                        const blockHeight = Number.parseInt(data.block_height, 16);
-
-                        setBattleStatus(old => {
-                            if (!old) return old;
-
-                            const hitsMap = new Map<number, Round>();
-                            old.hits.forEach(hit => hitsMap.set(hit.block_height, hit));
-
+                        if (!hitsMap.has(blockHeight)) {
                             hitsMap.set(blockHeight, {
                                 block_height: blockHeight,
-                                contender_1_best_diff: data.contender_1_best_diff,
-                                contender_2_best_diff: data.contender_2_best_diff,
-                                finalized_at: new Date(data.date),
+                                contender_1_best_diff: 0,
+                                contender_2_best_diff: 0,
+                                finalized_at: null,
                                 battle_id: old.battle_id,
-                                winner: data.winner
+                                winner: null
                             });
+                        }
 
-                            const hitsArray = Array.from(hitsMap.values())
-                                .sort((a, b) => b.block_height - a.block_height);
+                        const hitsArray = Array.from(hitsMap.values())
+                            .sort((a, b) => b.block_height - a.block_height);
 
-                            old.contender_info[0].pv = data.contender_1_pv
-                            old.contender_info[1].pv = data.contender_2_pv
+                        return { ...old, current_round: data.round, hits: hitsArray, contender_info: old.contender_info.map(c => ({...c, current_round_best_diff: 0})) };
+                    })
+                    break;
+                }
 
-                            return {...old, hits: hitsArray};
+                case "HIT_RESULT": {
+                    const blockHeight = Number.parseInt(data.block_height, 16);
+
+                    setBattleStatus(old => {
+                        if (!old) return old;
+
+                        const hitsMap = new Map<number, Round>();
+                        old.hits.forEach(hit => hitsMap.set(hit.block_height, hit));
+
+                        hitsMap.set(blockHeight, {
+                            block_height: blockHeight,
+                            contender_1_best_diff: data.contender_1_best_diff,
+                            contender_2_best_diff: data.contender_2_best_diff,
+                            finalized_at: new Date(data.date),
+                            battle_id: old.battle_id,
+                            winner: data.winner
                         });
 
-                        break;
-                    }
-                    case "BATTLE_END": {
-                        console.debug("C fini au revoir");
-                        break;
-                    }
+                        const hitsArray = Array.from(hitsMap.values())
+                            .sort((a, b) => b.block_height - a.block_height);
+
+                        return {...old, hits: hitsArray, contender_info: old.contender_info.map((c, i) => ({...c, pv: i === 0 ? data.contender_1_pv : data.contender_2_pv}))};
+                    });
+
+                    break;
                 }
-            };
+                case "BATTLE_END": {
+                    setBattleStatus(old => old ? {...old, is_finished: true, contender_info: old.contender_info.map((c, i) => ({...c, pv: i === 0 ? data.contender_1_pv : data.contender_2_pv}))} : old);
+                    break;
+                }
+            }
         }
-
-        connect();
-
-        return () => {
-            cancelled = true;
-            if (reconnectTimer) clearTimeout(reconnectTimer);
-            socket?.close();
         };
+        connect();
+        const drain = setInterval(() => {
+            const count = Math.max(1, Math.ceil(shareQueue.current.length / 20));
+            const batch = shareQueue.current.splice(0, count);
+            if (batch.length) setShares(old => [...batch.reverse(), ...old].slice(0, 16));
+        }, 120);
+        const poll = setInterval(() => {
+            getBattleStatus(battleId, false).then(fresh => setBattleStatus(old => old && fresh ? {...old, contender_info: old.contender_info.map((c, i) => ({...c, hashrate: fresh.contender_info[i]?.hashrate}))} : old)).catch(console.error);
+        }, 15000);
+        return () => { stopped = true; clearTimeout(reconnect); clearInterval(drain); clearInterval(poll); ws?.close(); shareQueue.current = []; seenShares.current.clear(); };
     }, [battleId]);
+
+    const diff1 = battleStatus?.contender_info[0]?.current_round_best_diff ?? 0;
+    const diff2 = battleStatus?.contender_info[1]?.current_round_best_diff ?? 0;
+    const leader = diff1 === diff2 ? 0 : diff1 > diff2 ? 1 : 2;
+    useEffect(() => {
+        if (leader && previousLead.current && leader !== previousLead.current) {
+            setLeadFlash(leader);
+            const timeout = setTimeout(() => setLeadFlash(0), 1400);
+            previousLead.current = leader;
+            return () => clearTimeout(timeout);
+        }
+        previousLead.current = leader;
+    }, [leader]);
 
     const logContent = battleStatus?.hits?.length ? (
         <div className={styles.logScroll}>
@@ -282,7 +295,7 @@ export default function BatlePage() {
 
             <div className={styles.battleContent}>
                 <div className={styles.versusRow}>
-                    <div className={`${styles.contender_div} ${styles.contenderStart}`}>
+                    <div className={`${styles.contender_div} ${styles.contenderStart} ${leader === 1 ? styles.leading : ""} ${leadFlash === 1 ? styles.leadFlash : ""}`}>
                         {battleStatus ? <PlayerLeft
                             name={battleStatus.contender_info[0].name}
                             pv={battleStatus.contender_info[0].pv}
@@ -291,23 +304,21 @@ export default function BatlePage() {
                             worker={battleStatus.contender_info[0].worker}
                             alignment="start"
                         /> : <PlayerLeft name="Ça charge..." pv={0} pvMax={1} alignment="start" />}
+                        <div className={styles.liveStats}><span>HASHRATE · 1 MIN</span><strong>{battleStatus?.contender_info[0]?.hashrate ? `${battleStatus.contender_info[0].hashrate}H/s` : "—"}</strong>{leader === 1 && <em>EN TÊTE</em>}</div>
                     </div>
 
-                    <div className={styles.roundBadgeWrap}>
-                        <span className={styles.roundLabel}>Round</span>
-                        <div className={styles.roundBadgeOuter}>
-                            <div className={styles.roundBadgeMid}>
-                                <div className={styles.roundBadgeRing}>
-                                    <div className={styles.roundBadgeInner}>
-                                        <h1>{battleStatus?.current_round ?? 0}</h1>
-                                        <h2 className={styles.roundBadgeTotal}>/{battleStatus?.rounds ?? 0}</h2>
-                                    </div>
+                    <div className={styles.roundBadgeOuter}>
+                        <div className={styles.roundBadgeMid}>
+                            <div className={styles.roundBadgeRing}>
+                                <div className={styles.roundBadgeInner}>
+                                    <h1>{battleStatus?.current_round ?? 0}</h1>
+                                    <h2 className={styles.roundBadgeTotal}>/{battleStatus?.rounds ?? 0}</h2>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <div className={`${styles.contender_div} ${styles.contenderEnd}`}>
+                    <div className={`${styles.contender_div} ${styles.contenderEnd} ${leader === 2 ? styles.leading : ""} ${leadFlash === 2 ? styles.leadFlash : ""}`}>
                         {battleStatus ? <PlayerRight
                             name={battleStatus.contender_info[1].name}
                             pv={battleStatus.contender_info[1].pv}
@@ -316,8 +327,17 @@ export default function BatlePage() {
                             worker={battleStatus.contender_info[1].worker}
                             alignment="end"
                         /> : <PlayerRight name="Ça charge..." pv={0} pvMax={1} alignment="end" />}
+                        <div className={`${styles.liveStats} ${styles.liveStatsEnd}`}><span>HASHRATE · 1 MIN</span><strong>{battleStatus?.contender_info[1]?.hashrate ? `${battleStatus.contender_info[1].hashrate}H/s` : "—"}</strong>{leader === 2 && <em>EN TÊTE</em>}</div>
                     </div>
                 </div>
+                <section className={styles.sharePanel} aria-label="Shares en direct">
+                    <div className={styles.shareHeader}><strong>⚡ FLUX DES SHARES</strong><span className={connection ? styles.online : styles.offline}>{connection ? "● EN DIRECT" : "● RECONNEXION"}</span></div>
+                    <div className={styles.shareColumns}>{["contender_1", "contender_2"].map((contender, index) => <div className={styles.shareColumn} key={contender}>
+                        <span className={styles.shareName}>{battleStatus?.contender_info[index]?.name ?? `Combattant ${index + 1}`}</span>
+                        {shares.filter(share => share.user === contender).slice(0, 5).map(share => <div className={styles.shareItem} key={`${share.user}:${share.share_id}`}><span>↗ SHARE</span><strong>{UnitConverter.fromNumberToString(share.diff)}</strong></div>)}
+                        {!shares.some(share => share.user === contender) && <p className={styles.shareEmpty}>En attente de shares…</p>}
+                    </div>)}</div>
+                </section>
                 <div className={styles.historyPanel}>
                     <div className={styles.historyHeader}>
                         <p>{battleStatus?.hits ? battleStatus?.hits?.filter(hit => hit.winner === 1).length : "-"}</p>

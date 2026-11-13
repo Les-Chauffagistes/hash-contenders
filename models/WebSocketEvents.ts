@@ -22,4 +22,6 @@ type BattleEnd = {
     type: "BATTLE_END", winner: number, contender_1_pv: number, contender_2_pv: number
 }
 
-export type WebSocketEvent = BestShareUpdate | RoundUpdate | HitResult | BattleEnd
+export type ShareEvent = { type: "SHARE", user: "contender_1" | "contender_2", diff: number, block_height: number, share_id: string, created_at: string }
+
+export type WebSocketEvent = BestShareUpdate | RoundUpdate | HitResult | BattleEnd | ShareEvent
