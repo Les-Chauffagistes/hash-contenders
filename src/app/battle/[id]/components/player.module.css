@@ -137,6 +137,8 @@
     color: var(--camp-b-light);
 }
 
+.leader { color: var(--gold); font-family: var(--font-mono); font-size: 9px; font-weight: 700; letter-spacing: .06em; }
+
 @media (max-width: 768px) {
     .player {
         gap: 8px;

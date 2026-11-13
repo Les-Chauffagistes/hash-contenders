@@ -10,9 +10,10 @@ export type PlayerRightProps = {
     alignment: "start" | "end"
     bestDiff?: number
     worker?: string | null
+    leading?: boolean
 }
 
-export default function PlayerRight({ name, pv, pvMax, alignment, bestDiff, worker }: PlayerRightProps) {
+export default function PlayerRight({ name, pv, pvMax, alignment, bestDiff, worker, leading }: PlayerRightProps) {
     return (
         <div className={`${styles.player} ${styles.playerEnd}`}>
             <div className={`${styles.headerRow} ${styles.headerRowEnd}`}>
@@ -37,6 +38,7 @@ export default function PlayerRight({ name, pv, pvMax, alignment, bestDiff, work
             <div className={`${styles.statBox} ${styles.statBoxEnd}`}>
                 <span className={styles.statLabel}>Meilleur coup — round</span>
                 <span className={`${styles.statValue} ${styles.statValueB}`}>{UnitConverter.fromNumberToString(bestDiff ?? 0)}</span>
+                {leading && <span className={styles.leader}>EN TÊTE DU ROUND</span>}
             </div>
         </div>
     )

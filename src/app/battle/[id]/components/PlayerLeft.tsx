@@ -10,10 +10,10 @@ export type PlayerLeftProps = {
     alignment: "start" | "end"
     bestDiff?: number
     worker?: string | null
-    hashrateString?: string
+    leading?: boolean
 }
 
-export default function PlayerLeft({ name, pv, pvMax, alignment, bestDiff, worker, hashrateString }: Readonly<PlayerLeftProps>) {
+export default function PlayerLeft({ name, pv, pvMax, alignment, bestDiff, worker, leading }: Readonly<PlayerLeftProps>) {
     return (
         <div className={styles.player}>
             <div className={styles.headerRow}>
@@ -38,10 +38,7 @@ export default function PlayerLeft({ name, pv, pvMax, alignment, bestDiff, worke
             <div className={styles.statBox}>
                 <span className={styles.statLabel}>Meilleur coup — round</span>
                 <span className={`${styles.statValue} ${styles.statValueA}`}>{UnitConverter.fromNumberToString(bestDiff ?? 0)}</span>
-            </div>
-            <div className={styles.statBox}>
-                <span className={styles.statLabel}>Hashrate</span>
-                <span className={`${styles.statValue} ${styles.statValueA}`}>{hashrateString}</span>
+                {leading && <span className={styles.leader}>EN TÊTE DU ROUND</span>}
             </div>
         </div>
     )

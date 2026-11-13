@@ -80,12 +80,14 @@ export default function BatlePage() {
         let ws: WebSocket;
         let stopped = false;
         let reconnectAttempts = 0;
+        let lastPong = Date.now();
         let reconnect: ReturnType<typeof setTimeout>;
         const connect = () => {
         ws = new WebSocket(`${config.WSS_URL}/v1/ws/${battleId}`);
-        ws.onopen = () => { reconnectAttempts = 0; setConnection(true); getBattleStatus(battleId, true).then(setBattleStatus).catch(console.error); };
+        ws.onopen = () => { reconnectAttempts = 0; lastPong = Date.now(); setConnection(true); getBattleStatus(battleId, true).then(setBattleStatus).catch(console.error); };
         ws.onclose = () => { setConnection(false); if (!stopped) reconnect = setTimeout(connect, nextReconnectDelayMs(reconnectAttempts++)); };
         ws.onmessage = (e) => {
+            if (e.data === "pong") { lastPong = Date.now(); return; }
             const data: WebSocketEvent = JSON.parse(e.data);
             switch (data.type) {
                 case "SHARE": {
@@ -178,6 +180,11 @@ export default function BatlePage() {
         }
         };
         connect();
+        const heartbeat = setInterval(() => {
+            if (ws?.readyState !== WebSocket.OPEN) return;
+            if (Date.now() - lastPong > 60000) { ws.close(); return; }
+            ws.send("ping");
+        }, 15000);
         const drain = setInterval(() => {
             const count = Math.max(1, Math.ceil(shareQueue.current.length / 20));
             const batch = shareQueue.current.splice(0, count);
@@ -186,7 +193,7 @@ export default function BatlePage() {
         const poll = setInterval(() => {
             getBattleStatus(battleId, false).then(fresh => setBattleStatus(old => old && fresh ? {...old, contender_info: old.contender_info.map((c, i) => ({...c, hashrate: fresh.contender_info[i]?.hashrate}))} : old)).catch(console.error);
         }, 15000);
-        return () => { stopped = true; clearTimeout(reconnect); clearInterval(drain); clearInterval(poll); ws?.close(); shareQueue.current = []; seenShares.current.clear(); };
+        return () => { stopped = true; clearTimeout(reconnect); clearInterval(heartbeat); clearInterval(drain); clearInterval(poll); ws?.close(); shareQueue.current = []; seenShares.current.clear(); };
     }, [battleId]);
 
     const diff1 = battleStatus?.contender_info[0]?.current_round_best_diff ?? 0;
@@ -302,11 +309,14 @@ export default function BatlePage() {
                             pvMax={battleStatus.contenders_base_pv}
                             bestDiff={battleStatus.contender_info[0].current_round_best_diff}
                             worker={battleStatus.contender_info[0].worker}
+                            leading={leader === 1}
                             alignment="start"
                         /> : <PlayerLeft name="Ça charge..." pv={0} pvMax={1} alignment="start" />}
-                        <div className={styles.liveStats}><span>HASHRATE · 1 MIN</span><strong>{battleStatus?.contender_info[0]?.hashrate ? `${battleStatus.contender_info[0].hashrate}H/s` : "—"}</strong>{leader === 1 && <em>EN TÊTE</em>}</div>
+                        <div className={styles.liveStats}><span>HASHRATE · 1 MIN</span><strong>{battleStatus?.contender_info[0]?.hashrate ? `${battleStatus.contender_info[0].hashrate}H/s` : "—"}</strong></div>
+                        {shares.find(s => s.user === "contender_1") && <span key={shares.find(s => s.user === "contender_1")!.share_id} className={styles.shareFloat} aria-hidden="true">+{UnitConverter.fromNumberToString(shares.find(s => s.user === "contender_1")!.diff)}</span>}
                     </div>
 
+                    <div className={styles.centerColumn}>
                     <div className={styles.roundBadgeOuter}>
                         <div className={styles.roundBadgeMid}>
                             <div className={styles.roundBadgeRing}>
@@ -317,6 +327,12 @@ export default function BatlePage() {
                             </div>
                         </div>
                     </div>
+                    <section className={styles.sharePanel} aria-label="Shares en direct">
+                        <div className={styles.shareHeader}><strong>⚡ SHARES</strong><span className={connection ? styles.online : styles.offline}>{connection ? "● LIVE" : "● …"}</span></div>
+                        <div className={styles.shareList}>{shares.slice(0, 5).map(share => <div className={`${styles.shareItem} ${share.user === "contender_1" ? styles.shareA : styles.shareB}`} key={`${share.user}:${share.share_id}`}><span>{share.user === "contender_1" ? "◀" : "▶"}</span><strong>{UnitConverter.fromNumberToString(share.diff)}</strong></div>)}
+                        {!shares.length && <p className={styles.shareEmpty}>En attente…</p>}</div>
+                    </section>
+                    </div>
 
                     <div className={`${styles.contender_div} ${styles.contenderEnd} ${leader === 2 ? styles.leading : ""} ${leadFlash === 2 ? styles.leadFlash : ""}`}>
                         {battleStatus ? <PlayerRight
@@ -325,19 +341,13 @@ export default function BatlePage() {
                             pvMax={battleStatus.contenders_base_pv}
                             bestDiff={battleStatus.contender_info[1].current_round_best_diff}
                             worker={battleStatus.contender_info[1].worker}
+                            leading={leader === 2}
                             alignment="end"
                         /> : <PlayerRight name="Ça charge..." pv={0} pvMax={1} alignment="end" />}
-                        <div className={`${styles.liveStats} ${styles.liveStatsEnd}`}><span>HASHRATE · 1 MIN</span><strong>{battleStatus?.contender_info[1]?.hashrate ? `${battleStatus.contender_info[1].hashrate}H/s` : "—"}</strong>{leader === 2 && <em>EN TÊTE</em>}</div>
+                        <div className={`${styles.liveStats} ${styles.liveStatsEnd}`}><span>HASHRATE · 1 MIN</span><strong>{battleStatus?.contender_info[1]?.hashrate ? `${battleStatus.contender_info[1].hashrate}H/s` : "—"}</strong></div>
+                        {shares.find(s => s.user === "contender_2") && <span key={shares.find(s => s.user === "contender_2")!.share_id} className={styles.shareFloat} aria-hidden="true">+{UnitConverter.fromNumberToString(shares.find(s => s.user === "contender_2")!.diff)}</span>}
                     </div>
                 </div>
-                <section className={styles.sharePanel} aria-label="Shares en direct">
-                    <div className={styles.shareHeader}><strong>⚡ FLUX DES SHARES</strong><span className={connection ? styles.online : styles.offline}>{connection ? "● EN DIRECT" : "● RECONNEXION"}</span></div>
-                    <div className={styles.shareColumns}>{["contender_1", "contender_2"].map((contender, index) => <div className={styles.shareColumn} key={contender}>
-                        <span className={styles.shareName}>{battleStatus?.contender_info[index]?.name ?? `Combattant ${index + 1}`}</span>
-                        {shares.filter(share => share.user === contender).slice(0, 5).map(share => <div className={styles.shareItem} key={`${share.user}:${share.share_id}`}><span>↗ SHARE</span><strong>{UnitConverter.fromNumberToString(share.diff)}</strong></div>)}
-                        {!shares.some(share => share.user === contender) && <p className={styles.shareEmpty}>En attente de shares…</p>}
-                    </div>)}</div>
-                </section>
                 <div className={styles.historyPanel}>
                     <div className={styles.historyHeader}>
                         <p>{battleStatus?.hits ? battleStatus?.hits?.filter(hit => hit.winner === 1).length : "-"}</p>
