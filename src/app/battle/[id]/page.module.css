@@ -493,3 +493,42 @@
   .shareFloat { font-size: 16px; }
 }
 @media (prefers-reduced-motion: reduce) { .shareFloat { animation: none; opacity: 0; } }
+
+/* Announcements sit over the arena and never block interaction. */
+.moment { position: absolute; z-index: 25; inset: 40px 0 auto; height: 270px; display: grid; place-items: center; overflow: hidden; pointer-events: none; animation: momentReveal 2.4s ease-out both; }
+.moment.victory { position: fixed; inset: 0; height: 100%; z-index: 90; background: radial-gradient(ellipse, #271807d9 0%, #110b08b8 48%, transparent 78%); animation-duration: 6s; }
+.momentRays { position: absolute; width: 420px; aspect-ratio: 1; border-radius: 50%; opacity: .45; background: repeating-conic-gradient(from 0deg, #ffc25a99 0deg 4deg, transparent 5deg 20deg); mask-image: radial-gradient(circle, transparent 5%, #000 24%, transparent 70%); animation: raysSpin 5s linear infinite; }
+.momentContent { position: relative; width: min(80%, 440px); text-align: center; padding: 15px 24px; color: #ffe4a2; border-block: 2px solid #ffc75a; background: linear-gradient(90deg, transparent, #1a1009ed 18%, #1a1009ed 82%, transparent); text-shadow: 0 0 20px #ff9900; transform: skew(-5deg); }
+.momentContent span, .momentContent small { display: block; font: 700 11px var(--font-mono); letter-spacing: .14em; }
+.momentContent strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: clamp(25px, 6vw, 52px); line-height: 1.15; text-transform: uppercase; }
+.moment.victory .momentContent strong { font-size: clamp(36px, 9vw, 76px); }
+@keyframes momentReveal { 0% { opacity: 0; transform: scale(1.35); } 12%, 80% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(1.05); } }
+@keyframes raysSpin { to { transform: rotate(90deg); } }
+
+@media (max-width: 768px) {
+  .versusRow { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: auto 48px; flex: 0 0 auto; gap: 5px; margin: 2px 0 8px; }
+  .page .contender_div { min-height: 170px; padding: 8px; gap: 5px; }
+  .contenderStart { grid-column: 1; grid-row: 1; }
+  .contenderEnd { grid-column: 2; grid-row: 1; }
+  .centerColumn { grid-column: 1 / -1; grid-row: 2; width: 100%; padding: 0; flex-direction: row; align-items: center; gap: 7px; }
+  .roundBadgeOuter { flex: 0 0 auto; }
+  .roundBadgeMid { padding: 3px; }
+  .roundBadgeRing { padding: 3px; }
+  .roundBadgeInner { width: 36px; height: 36px; }
+  .roundBadgeInner h1 { font-size: 16px; }
+  .roundBadgeTotal { font-size: 9px; }
+  .sharePanel { flex: 1 1 auto; width: auto; height: 44px; padding: 4px 7px; display: flex; align-items: center; gap: 8px; }
+  .shareHeader { flex: 0 0 auto; flex-direction: column; align-items: flex-start; }
+  .shareList { display: flex; align-items: center; gap: 4px; height: auto; flex: 1; min-width: 0; }
+  .shareItem { flex: 0 0 auto; margin: 0; padding: 4px; }
+  .shareItem:nth-of-type(n+4) { display: none; }
+  .shareEmpty { margin: 0; white-space: nowrap; }
+  .liveStats { font-size: 9px; }
+  .liveStats strong { font-size: 13px; }
+  .historyPanel { min-height: 0; }
+  .moment { inset: 35px 0 auto; height: 240px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .moment, .moment.victory, .momentRays { animation: none; }
+  .momentRays { display: none; }
+}

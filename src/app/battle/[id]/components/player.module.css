@@ -186,3 +186,17 @@
         font-size: 13px;
     }
 }
+
+@media (max-width: 768px) {
+    .player { gap: 5px; }
+    .headerRow { gap: 5px; }
+    .avatar { width: 24px; height: 24px; font-size: 11px; }
+    .name { font-size: 12px; }
+    .workerTag { font-size: 9px; }
+    .gaugeBlock { gap: 2px; }
+    .gaugeLabels { font-size: 9px; }
+    .statBox { max-width: 100%; padding: 4px 6px; }
+    .statLabel { font-size: 8px; letter-spacing: 0; }
+    .statValue { font-size: 14px; }
+    .leader { font-size: 8px; }
+}

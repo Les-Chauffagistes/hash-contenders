@@ -29,6 +29,9 @@ export default function BatlePage() {
     const [shares, setShares] = useState<ShareEvent[]>([]);
     const [connection, setConnection] = useState(false);
     const [leadFlash, setLeadFlash] = useState<0 | 1 | 2>(0);
+    const [moment, setMoment] = useState<{kind: "lead" | "round" | "victory", winner: number | null, id: number} | null>(null);
+    const momentTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const momentSequence = useRef(0);
     const shareQueue = useRef<ShareEvent[]>([]);
     const seenShares = useRef(new Set<string>());
     const previousLead = useRef(0);
@@ -53,6 +56,13 @@ export default function BatlePage() {
         battleStatus?.contender_info[1]?.worker,
     );
     const battleModeLabel = battleMode === "miner" ? "Mineur vs Mineur" : "Pool vs Pool";
+
+    function celebrate(kind: "lead" | "round" | "victory", winner: number | null) {
+        if (document.hidden) return;
+        if (momentTimer.current) clearTimeout(momentTimer.current);
+        setMoment({kind, winner, id: ++momentSequence.current});
+        momentTimer.current = setTimeout(() => setMoment(null), kind === "victory" ? 6000 : 2400);
+    }
 
     async function handleDeleteBattle() {
         const parsedBattleId = Number(battleId);
@@ -91,6 +101,9 @@ export default function BatlePage() {
             const data: WebSocketEvent = JSON.parse(e.data);
             switch (data.type) {
                 case "SHARE": {
+                    if (document.hidden) break;
+                    const age = Date.now() - Date.parse(data.created_at);
+                    if (Number.isFinite(age) && age > 15000) break;
                     const key = `${data.user}:${data.share_id}`;
                     if (!seenShares.current.has(key)) {
                         seenShares.current.add(key);
@@ -147,6 +160,7 @@ export default function BatlePage() {
                 }
 
                 case "HIT_RESULT": {
+                    celebrate("round", data.winner);
                     const blockHeight = Number.parseInt(data.block_height, 16);
 
                     setBattleStatus(old => {
@@ -173,6 +187,7 @@ export default function BatlePage() {
                     break;
                 }
                 case "BATTLE_END": {
+                    celebrate("victory", data.winner);
                     setBattleStatus(old => old ? {...old, is_finished: true, contender_info: old.contender_info.map((c, i) => ({...c, pv: i === 0 ? data.contender_1_pv : data.contender_2_pv}))} : old);
                     break;
                 }
@@ -186,6 +201,7 @@ export default function BatlePage() {
             ws.send("ping");
         }, 15000);
         const drain = setInterval(() => {
+            if (document.hidden) { shareQueue.current = []; return; }
             const count = Math.max(1, Math.ceil(shareQueue.current.length / 20));
             const batch = shareQueue.current.splice(0, count);
             if (batch.length) setShares(old => [...batch.reverse(), ...old].slice(0, 16));
@@ -193,7 +209,18 @@ export default function BatlePage() {
         const poll = setInterval(() => {
             getBattleStatus(battleId, false).then(fresh => setBattleStatus(old => old && fresh ? {...old, contender_info: old.contender_info.map((c, i) => ({...c, hashrate: fresh.contender_info[i]?.hashrate}))} : old)).catch(console.error);
         }, 15000);
-        return () => { stopped = true; clearTimeout(reconnect); clearInterval(heartbeat); clearInterval(drain); clearInterval(poll); ws?.close(); shareQueue.current = []; seenShares.current.clear(); };
+        const onVisibilityChange = () => {
+            shareQueue.current = [];
+            if (document.hidden) {
+                if (momentTimer.current) clearTimeout(momentTimer.current);
+                setMoment(null);
+            } else {
+                setShares([]);
+                getBattleStatus(battleId, true).then(setBattleStatus).catch(console.error);
+            }
+        };
+        document.addEventListener("visibilitychange", onVisibilityChange);
+        return () => { stopped = true; clearTimeout(reconnect); clearInterval(heartbeat); clearInterval(drain); clearInterval(poll); if (momentTimer.current) clearTimeout(momentTimer.current); document.removeEventListener("visibilitychange", onVisibilityChange); ws?.close(); shareQueue.current = []; seenShares.current.clear(); };
     }, [battleId]);
 
     const diff1 = battleStatus?.contender_info[0]?.current_round_best_diff ?? 0;
@@ -202,6 +229,7 @@ export default function BatlePage() {
     useEffect(() => {
         if (leader && previousLead.current && leader !== previousLead.current) {
             setLeadFlash(leader);
+            celebrate("lead", leader);
             const timeout = setTimeout(() => setLeadFlash(0), 1400);
             previousLead.current = leader;
             return () => clearTimeout(timeout);
@@ -222,6 +250,14 @@ export default function BatlePage() {
 
     return (
         <main className={styles.page}>
+            {moment && <div key={moment.id} className={`${styles.moment} ${styles[moment.kind]}`} role="status" aria-live="polite">
+                <div className={styles.momentRays} aria-hidden="true" />
+                <div className={styles.momentContent}>
+                    <span>{moment.kind === "victory" ? "🏆 FIN DE LA BATAILLE" : moment.kind === "round" ? "⚡ FIN DU ROUND" : "⚡ CHANGEMENT DE TÊTE"}</span>
+                    <strong>{moment.winner ? battleStatus?.contender_info[moment.winner - 1]?.name ?? `Combattant ${moment.winner}` : "ÉGALITÉ"}</strong>
+                    <small>{moment.winner ? (moment.kind === "victory" ? "REMPORTE LA BATAILLE !" : moment.kind === "round" ? "REMPORTE LE ROUND !" : "PREND LA TÊTE !") : "MATCH NUL"}</small>
+                </div>
+            </div>}
             <div className={styles.battleHeader}>
                 <div className={styles.battleLabelGroup}>
                     <span className={styles.battleLabel}>Bataille #{battleId}</span>
