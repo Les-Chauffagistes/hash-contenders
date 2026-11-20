@@ -113,7 +113,7 @@ export default function BatlePage() {
                     break;
                 }
                 case "BEST_SHARE_UPDATE": {
-                    const blockHeight = Number(data.block_height);
+                    const blockHeight = data.block_height;
                     const contenderIndex = data.user === "contender_1" ? 0 : 1;
                     const diffKey = data.user === "contender_1" ? "contender_1_best_diff" : "contender_2_best_diff";
                     setBattleStatus(old => {
@@ -133,7 +133,7 @@ export default function BatlePage() {
                 }
 
                 case "ROUND_UPDATE": {
-                    const blockHeight = Number(data.block_height);
+                    const blockHeight = data.block_height;
                     setBattleStatus(old => {
                         if (!old) return old;
 
@@ -161,7 +161,7 @@ export default function BatlePage() {
 
                 case "HIT_RESULT": {
                     celebrate("round", data.winner);
-                    const blockHeight = Number.parseInt(data.block_height, 16);
+                    const blockHeight = data.block_height;
 
                     setBattleStatus(old => {
                         if (!old) return old;
