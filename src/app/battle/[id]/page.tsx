@@ -90,14 +90,14 @@ export default function BatlePage() {
         let ws: WebSocket;
         let stopped = false;
         let reconnectAttempts = 0;
-        let lastPong = Date.now();
+        let lastAck = Date.now();
         let reconnect: ReturnType<typeof setTimeout>;
         const connect = () => {
         ws = new WebSocket(`${config.WSS_URL}/v1/ws/${battleId}`);
-        ws.onopen = () => { reconnectAttempts = 0; lastPong = Date.now(); setConnection(true); getBattleStatus(battleId, true).then(setBattleStatus).catch(console.error); };
+        ws.onopen = () => { reconnectAttempts = 0; lastAck = Date.now(); setConnection(true); getBattleStatus(battleId, true).then(setBattleStatus).catch(console.error); };
         ws.onclose = () => { setConnection(false); if (!stopped) reconnect = setTimeout(connect, nextReconnectDelayMs(reconnectAttempts++)); };
         ws.onmessage = (e) => {
-            if (e.data === "pong") { lastPong = Date.now(); return; }
+            if (e.data === "ack") { lastAck = Date.now(); return; }
             const data: WebSocketEvent = JSON.parse(e.data);
             switch (data.type) {
                 case "SHARE": {
@@ -197,7 +197,7 @@ export default function BatlePage() {
         connect();
         const heartbeat = setInterval(() => {
             if (ws?.readyState !== WebSocket.OPEN) return;
-            if (Date.now() - lastPong > 60000) { ws.close(); return; }
+            if (Date.now() - lastAck > 60000) { ws.close(); return; }
             ws.send("ping");
         }, 15000);
         const drain = setInterval(() => {
