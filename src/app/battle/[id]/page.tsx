@@ -90,12 +90,14 @@ export default function BatlePage() {
         let ws: WebSocket;
         let stopped = false;
         let reconnectAttempts = 0;
+        let lastPong = Date.now();
         let reconnect: ReturnType<typeof setTimeout>;
         const connect = () => {
         ws = new WebSocket(`${config.WSS_URL}/v1/ws/${battleId}`);
-        ws.onopen = () => { reconnectAttempts = 0; setConnection(true); getBattleStatus(battleId, true).then(setBattleStatus).catch(console.error); };
+        ws.onopen = () => { reconnectAttempts = 0; lastPong = Date.now(); setConnection(true); getBattleStatus(battleId, true).then(setBattleStatus).catch(console.error); };
         ws.onclose = () => { setConnection(false); if (!stopped) reconnect = setTimeout(connect, nextReconnectDelayMs(reconnectAttempts++)); };
         ws.onmessage = (e) => {
+            if (e.data === "pong") { lastPong = Date.now(); return; }
             const data: WebSocketEvent = JSON.parse(e.data);
             switch (data.type) {
                 case "SHARE": {
@@ -193,6 +195,11 @@ export default function BatlePage() {
         }
         };
         connect();
+        const heartbeat = setInterval(() => {
+            if (ws?.readyState !== WebSocket.OPEN) return;
+            if (Date.now() - lastPong > 60000) { ws.close(); return; }
+            ws.send("ping");
+        }, 15000);
         const drain = setInterval(() => {
             if (document.hidden) { shareQueue.current = []; return; }
             const count = Math.max(1, Math.ceil(shareQueue.current.length / 20));
@@ -213,7 +220,7 @@ export default function BatlePage() {
             }
         };
         document.addEventListener("visibilitychange", onVisibilityChange);
-        return () => { stopped = true; clearTimeout(reconnect); clearInterval(drain); clearInterval(poll); if (momentTimer.current) clearTimeout(momentTimer.current); document.removeEventListener("visibilitychange", onVisibilityChange); ws?.close(); shareQueue.current = []; seenShares.current.clear(); };
+        return () => { stopped = true; clearTimeout(reconnect); clearInterval(heartbeat); clearInterval(drain); clearInterval(poll); if (momentTimer.current) clearTimeout(momentTimer.current); document.removeEventListener("visibilitychange", onVisibilityChange); ws?.close(); shareQueue.current = []; seenShares.current.clear(); };
     }, [battleId]);
 
     const diff1 = battleStatus?.contender_info[0]?.current_round_best_diff ?? 0;
